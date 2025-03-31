@@ -1,0 +1,35 @@
+﻿services:
+  corporate-system-notification-db:
+    container_name: corporate-system-notification-db
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notification-db
+    ports:
+      - "15433:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - shared-network
+
+  corporate-system-notification:
+    container_name: corporate-system-notification
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:50051"
+    depends_on:
+      - corporate-system-notification-db
+    networks:
+      - shared-network
+
+volumes:
+  notification_db_data:
+    
+networks:
+  shared-network:
+    external: true

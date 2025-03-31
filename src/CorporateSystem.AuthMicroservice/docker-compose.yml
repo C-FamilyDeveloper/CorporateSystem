@@ -1,0 +1,41 @@
+﻿services:
+  corporate-system-auth-db:
+    image: postgres
+    container_name: corporate-system-auth-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth-db
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shared-network
+
+  corporate-system-auth:
+    container_name: corporate-system-auth
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5011:8091"
+    depends_on:
+      - corporate-system-auth-db
+    networks:
+      - shared-network
+  
+  corporate-system-auth-redis:
+    container_name: corporate-system-auth-redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - shared-network
+
+volumes:
+  postgres_data:
+    
+networks:
+  shared-network:
+    external: true

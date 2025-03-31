@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option csharp_namespace = "Api";
+
+package mail;
+
+service MailService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}
+
+message SendMessageRequest {
+  string token = 1;
+  string message = 2;
+  string title = 3;
+  repeated string receiverEmails = 4;
+}
+
+message SendMessageResponse {
+}
