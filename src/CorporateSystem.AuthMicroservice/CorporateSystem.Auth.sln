@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Domain", "CorporateSystem.Auth.Domain\CorporateSystem.Auth.Domain.csproj", "{674E1782-F1B1-419B-A777-4A265AB7F671}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Infrastructure", "CorporateSystem.Auth.Infrastructure\CorporateSystem.Auth.Infrastructure.csproj", "{B9846004-1DEF-4578-838D-7BF4BD7416D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Api", "CorporateSystem.Auth.Api\CorporateSystem.Auth.Api.csproj", "{671483C2-E900-4580-8ECF-376E4B36AA7E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2FDF6CA9-10DC-4A56-A96A-04F88DA685A0}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Services", "CorporateSystem.Auth.Services\CorporateSystem.Auth.Services.csproj", "{273AF8C4-FCCA-49F3-982E-158BD9AC0906}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Tests", "CorporateSystem.Auth.Tests\CorporateSystem.Auth.Tests.csproj", "{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{674E1782-F1B1-419B-A777-4A265AB7F671}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{674E1782-F1B1-419B-A777-4A265AB7F671}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{674E1782-F1B1-419B-A777-4A265AB7F671}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{674E1782-F1B1-419B-A777-4A265AB7F671}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9846004-1DEF-4578-838D-7BF4BD7416D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9846004-1DEF-4578-838D-7BF4BD7416D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9846004-1DEF-4578-838D-7BF4BD7416D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9846004-1DEF-4578-838D-7BF4BD7416D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{671483C2-E900-4580-8ECF-376E4B36AA7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{671483C2-E900-4580-8ECF-376E4B36AA7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{671483C2-E900-4580-8ECF-376E4B36AA7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{671483C2-E900-4580-8ECF-376E4B36AA7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{273AF8C4-FCCA-49F3-982E-158BD9AC0906}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{273AF8C4-FCCA-49F3-982E-158BD9AC0906}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{273AF8C4-FCCA-49F3-982E-158BD9AC0906}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{273AF8C4-FCCA-49F3-982E-158BD9AC0906}.Release|Any CPU.Build.0 = Release|Any CPU
+		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,15 @@
+﻿services:
+  corporatesystem-apigateway:
+    image: corporatesystem.apigateway.api
+    container_name: corporate-system-apigateway
+    ports:
+      - 5000:8003
+    build:
+      context: .
+      dockerfile: CorporateSystem.ApiGateway.Api/Dockerfile
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
