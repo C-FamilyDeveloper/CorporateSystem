@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
                 .RegisterAsync(
                     new RegisterUserDto(request.Email, request.Password, request.RepeatedPassword));
             
-            return Ok("Регистрация прошла успешно");
+            return Ok();
         }
         catch (Exception ex)
         {
