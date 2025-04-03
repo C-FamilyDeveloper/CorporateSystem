@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CorporateSystem.Auth.Infrastructure.Repositories.Implementations;
 
-internal class UserRepository(IContextFactory contextFactory, ILogger<IUserRepository> logger) : IUserRepository
+internal class UserRepository(IContextFactory contextFactory, ILogger<UserRepository> logger) : IUserRepository
 {
     public async Task<User?> GetUserByEmailAsync(string email, CancellationToken cancellationToken)
     {

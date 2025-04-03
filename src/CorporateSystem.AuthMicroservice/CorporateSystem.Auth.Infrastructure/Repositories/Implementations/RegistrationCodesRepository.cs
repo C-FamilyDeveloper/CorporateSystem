@@ -1,17 +1,14 @@
 ﻿using System.Net;
 using CorporateSystem.Auth.Domain.Exceptions;
-using CorporateSystem.Auth.Infrastructure.Options;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace CorporateSystem.Auth.Infrastructure.Repositories.Implementations;
 
 internal class RegistrationCodesRepository(
     IConnectionMultiplexer redis,
-    ILogger<IRegistrationCodesRepository> logger)
+    ILogger<RegistrationCodesRepository> logger)
     : IRegistrationCodesRepository
 {
     private readonly IDatabase _database = redis.GetDatabase();

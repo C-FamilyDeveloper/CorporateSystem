@@ -1,8 +1,8 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using CorporateSystem.Auth.Api.Dtos.Auth;
-using CorporateSystem.Auth.Api.Extensions;
 using CorporateSystem.Auth.Domain.Exceptions;
 using CorporateSystem.Auth.Services.Services.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CorporateSystem.Auth.Api.Controllers;
@@ -21,7 +21,7 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
             var token = await authService
                 .AuthenticateAsync(new AuthUserDto(request.Email, request.Password));
             
-            return new JsonResult(new AuthResponse
+            return Ok(new AuthResponse
             {
                 Token = token
             });
@@ -29,12 +29,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         catch (ExceptionWithStatusCode e)
         {
             logger.LogError(e.Message);
-            return e.Handle();
+            return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
             logger.LogError(e.Message);
-            return BadRequest("Что-то пошло не так");
+            return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
     
@@ -54,12 +54,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         catch (ExceptionWithStatusCode e)
         {
             logger.LogError(e.Message);
-            return e.Handle();
+            return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception ex)
         {
             logger.LogError(ex.Message);
-            return BadRequest("Что-то пошло не так");
+            return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
 
@@ -81,12 +81,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         catch (ExceptionWithStatusCode e)
         {
             logger.LogError(e.Message);
-            return e.Handle();
+            return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
             logger.LogError(e.Message);
-            return BadRequest("Что-то пошло не так");
+            return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
     
@@ -98,7 +98,7 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         try
         {
             var isValid = authService.ValidateToken(request.Token);
-
+            
             if (!isValid)
             {
                 return Unauthorized("Invalid token.");
@@ -110,12 +110,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         catch (ExceptionWithStatusCode e)
         {
             logger.LogError(e.Message);
-            return e.Handle();
+            return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
             logger.LogError(e.Message);
-            return Unauthorized("Token validation failed.");
+            return StatusCode(StatusCodes.Status401Unauthorized, "Token validation failed.");
         }
     }
     
