@@ -42,7 +42,7 @@ internal class UserService(
 
         if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
         {
-            throw new ExceptionWithStatusCode("Неправильный логин или пароль", HttpStatusCode.BadRequest);
+            throw new ExceptionWithStatusCode("Неправильный логин или пароль", HttpStatusCode.Unauthorized);
         }
         
         return GenerateJwtToken(user);
