@@ -1,0 +1,30 @@
+﻿services:
+  corporate-system-shared-docs-db:
+    container_name: corporate-system-shared-docs-db
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shared-docs-db
+    ports:
+      - 15434:5432
+    volumes:
+      - shared_docs_db_data:/var/lib/postgresql/data
+    networks:
+      - shared-network
+    
+  corporate-system-shared-docs:
+    container_name: corporate-system-shared-docs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports: 
+      - "5012:8093"
+    depends_on:
+      - corporate-system-shared-docs-db
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true
