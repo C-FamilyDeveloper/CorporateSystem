@@ -1,4 +1,5 @@
-﻿using CorporateSystem.SharedDocs.Domain.Entities;
+﻿using System.Runtime.CompilerServices;
+using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Infrastructure.Options;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Filters;
@@ -6,17 +7,16 @@ using CorporateSystem.SharedDocs.Infrastructure.Repositories.Interfaces;
 using Dapper;
 using Microsoft.Extensions.Options;
 
+[assembly: InternalsVisibleTo("CorporateSystem.SharedDocs.Tests")]
 namespace CorporateSystem.SharedDocs.Infrastructure.Repositories.Implementations;
 
-internal class DocumentRepository(IOptions<PostgreOptions> options) 
+internal class DocumentRepository(IOptions<PostgresOptions> options) 
     : PostgreRepository(options.Value), IDocumentRepository
 {
     protected override string TableName { get; } = "documents";
 
     public async Task<Document?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
-        using var transaction = CreateTransactionScope();
-
         var sqlQuery = $"select * from {TableName} where id = @Id";
         var command = new CommandDefinition(
             sqlQuery,
@@ -27,16 +27,19 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
         
+        using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
-        return await connection.QueryFirstOrDefaultAsync<Document>(command);
+        
+        var result = await connection.QueryFirstOrDefaultAsync<Document>(command);
+        
+        transaction.Complete();
+        return result;
     }
 
     public async Task<IEnumerable<Document>> GetAsync(
         DocumentFilter? filter = null,
         CancellationToken cancellationToken = default)
     {
-        using var transaction = CreateTransactionScope();
-
         var sqlQuery = $"select * from {TableName}";
         var @params = new DynamicParameters();
 
@@ -92,34 +95,43 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
         
+        using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
-        return await connection.QueryAsync<Document>(command);
+        var result = await connection.QueryAsync<Document>(command);
+        
+        transaction.Complete();
+        
+        return result;
     }
 
     public async Task<int[]> CreateAsync(CreateDocumentDto[] dtos, CancellationToken cancellationToken = default)
     {
-        using var transaction = CreateTransactionScope();
-
         var sqlQuery = @$"
-            insert into {TableName} (owner_id, title, content)
-            select owner_id
-                 , title
-                 , content
-              from UNNEST(@Dtos)";
+            insert into {TableName} (owner_id, title, content, created_at)
+            select UNNEST(@OwnerIds)
+                 , UNNEST(@Titles)
+                 , UNNEST(@Contents)
+                 , @CreatedAt
+         returning id";
         
         var command = new CommandDefinition(
             sqlQuery,
             new
             {
-                Dtos = dtos
+                OwnerIds = dtos.Select(dto => dto.OwnerId).ToArray(),
+                Titles = dtos.Select(dto => dto.Title).ToArray(),
+                Contents = dtos.Select(dto => dto.Content).ToArray(),
+                CreatedAt = DateTimeOffset.UtcNow
             },
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
         
+        using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
 
         var ids = await connection.QueryAsync<int>(command);
-
+        transaction.Complete();
+        
         return ids.ToArray();
     }
 
@@ -128,8 +140,6 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
         UpdateDocumentDto updatedDocumentDto,
         CancellationToken cancellationToken = default)
     {
-        using var transaction = CreateTransactionScope();
-
         var sqlQuery = @$"
             update {TableName}
                set owner_id = @OwnerId
@@ -149,6 +159,7 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
                 ModifiedAt = DateTimeOffset.UtcNow
             });
         
+        using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(command);
         
@@ -157,9 +168,7 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
 
     public async Task DeleteAsync(int[] ids, CancellationToken cancellationToken = default)
     {
-        using var transaction = CreateTransactionScope();
-
-        var sqlQuery = $"delete * from {TableName} where id = ANY(@Ids)";
+        var sqlQuery = $"delete from {TableName} where id = ANY(@Ids)";
         var command = new CommandDefinition(
             sqlQuery,
             new
@@ -169,8 +178,10 @@ internal class DocumentRepository(IOptions<PostgreOptions> options)
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
         
+        using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(command);
+        transaction.Complete();
     }
 }
 

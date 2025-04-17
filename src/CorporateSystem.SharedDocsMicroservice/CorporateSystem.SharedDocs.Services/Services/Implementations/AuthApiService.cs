@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Options;
@@ -7,10 +8,13 @@ using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+[assembly: InternalsVisibleTo("CorporateSystem.SharedDocs.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 namespace CorporateSystem.SharedDocs.Services.Services.Implementations;
 
 internal class AuthApiService(
     IOptions<AuthMicroserviceOptions> authOptions,
+    IHttpClientFactory httpClientFactory,
     ILogger<AuthApiService> logger) : IAuthApiService
 {
     private readonly AuthMicroserviceOptions _authMicroserviceOptions = authOptions.Value;
@@ -20,11 +24,9 @@ internal class AuthApiService(
         try
         {
             ArgumentNullException.ThrowIfNull(ids);
-            
-            using var httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_authMicroserviceOptions.Host)
-            };
+
+            using var httpClient = httpClientFactory.CreateClient();
+            httpClient.BaseAddress = new Uri(_authMicroserviceOptions.Host);
 
             var request = new GetUserEmailsByIdsRequest
             {
@@ -34,7 +36,7 @@ internal class AuthApiService(
             var httpMessage = new HttpRequestMessage
             {
                 Content = JsonContent.Create(request),
-                RequestUri = new Uri("/api/get-user-emails-by-id"),
+                RequestUri = new Uri(httpClient.BaseAddress, "/api/get-user-emails-by-id"),
                 Method = HttpMethod.Post
             };
 
@@ -63,11 +65,9 @@ internal class AuthApiService(
         try
         {
             ArgumentNullException.ThrowIfNull(emails);
-            
-            using var httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_authMicroserviceOptions.Host)
-            };
+
+            using var httpClient = httpClientFactory.CreateClient();
+            httpClient.BaseAddress = new Uri(_authMicroserviceOptions.Host);
 
             var request = new GetUserIdsByEmailsRequest
             {
@@ -77,7 +77,7 @@ internal class AuthApiService(
             var httpMessage = new HttpRequestMessage
             {
                 Content = JsonContent.Create(request),
-                RequestUri = new Uri("/api/get-user-ids-by-email"),
+                RequestUri = new Uri(httpClient.BaseAddress, "/api/get-user-ids-by-email"),
                 Method = HttpMethod.Post
             };
 

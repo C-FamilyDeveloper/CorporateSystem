@@ -13,8 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CA0C4285-0A40-4F0C-8C38-D5D9866335BA}"
 	ProjectSection(SolutionItems) = preProject
-		compose.yaml = compose.yaml
+		docker-compose.yaml = docker-compose.yaml
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Tests", "CorporateSystem.SharedDocs.Tests\CorporateSystem.SharedDocs.Tests.csproj", "{642FE3E9-F099-45F1-A3B5-598285914BBC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,5 +43,9 @@ Global
 		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
