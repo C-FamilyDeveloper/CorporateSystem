@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.SharedDocs.Infrastructure.Repositories.Implementations;
 
-internal class DocumentUserRepository(IOptions<PostgreOptions> options) 
+internal class DocumentUserRepository(IOptions<PostgresOptions> options) 
     : PostgreRepository(options.Value), IDocumentUserRepository
 {
     protected override string TableName { get; } = "document_users";

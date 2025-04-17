@@ -4,7 +4,7 @@ using Npgsql;
 
 namespace CorporateSystem.SharedDocs.Infrastructure.Repositories;
 
-internal abstract class PostgreRepository(PostgreOptions postgreOptions)
+internal abstract class PostgreRepository(PostgresOptions postgresOptions)
 {
     protected const int DefaultTimeoutInSeconds = 5;
     protected abstract string TableName { get; }
@@ -23,7 +23,7 @@ internal abstract class PostgreRepository(PostgreOptions postgreOptions)
 
     protected async Task<NpgsqlConnection> GetAndOpenConnectionAsync(CancellationToken cancellationToken)
     {
-        var connection = new NpgsqlConnection(postgreOptions.ConnectionString);
+        var connection = new NpgsqlConnection(postgresOptions.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         await connection.ReloadTypesAsync(cancellationToken);
         return connection;
