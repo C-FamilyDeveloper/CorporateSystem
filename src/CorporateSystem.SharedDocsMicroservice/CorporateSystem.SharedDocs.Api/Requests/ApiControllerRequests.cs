@@ -18,5 +18,6 @@ public class DocumentUserInfoDto
     public required string UserEmail { get; init; }
     
     [JsonPropertyName("access_level")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public AccessLevel AccessLevel { get; init; }
 }

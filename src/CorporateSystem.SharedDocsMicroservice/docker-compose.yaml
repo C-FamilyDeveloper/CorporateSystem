@@ -12,18 +12,21 @@
       - shared_docs_db_data:/var/lib/postgresql/data
     networks:
       - shared-network
-    
+  
   corporate-system-shared-docs:
     container_name: corporate-system-shared-docs
     build:
       context: .
       dockerfile: Dockerfile
-    ports: 
+    ports:
       - "5012:8093"
     depends_on:
       - corporate-system-shared-docs-db
     networks:
       - shared-network
+
+volumes:
+  shared_docs_db_data:
 
 networks:
   shared-network:

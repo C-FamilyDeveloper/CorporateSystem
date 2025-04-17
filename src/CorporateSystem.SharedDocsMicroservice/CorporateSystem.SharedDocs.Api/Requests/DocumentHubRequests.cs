@@ -12,6 +12,7 @@ public class JoinDocumentGroupRequest
     public required int UserId { get; init; }
     
     [JsonPropertyName("access_level")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public required AccessLevel AccessLevel { get; init; }
 }
 

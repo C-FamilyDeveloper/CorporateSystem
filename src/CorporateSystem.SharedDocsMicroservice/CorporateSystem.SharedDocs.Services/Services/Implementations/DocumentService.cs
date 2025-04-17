@@ -18,11 +18,8 @@ internal class DocumentService(
     ILogger<DocumentService> logger,
     IDocumentRepository documentRepository,
     IDocumentUserRepository documentUserRepository,
-    IAuthApiService authApiService,
-    IOptions<AuthMicroserviceOptions> authOptions) : IDocumentService
+    IAuthApiService authApiService) : IDocumentService
 {
-    private readonly AuthMicroserviceOptions _authMicroserviceOptions = authOptions.Value;
-
     public async Task<int> CreateDocumentAsync(CreateDocumentDto dto, CancellationToken cancellationToken = default)
     {
         var ids = await documentRepository.CreateAsync(

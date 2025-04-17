@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSharedDocsServices(this IServiceCollection services)
     {
         return services
+            .AddHttpClient()
             .AddScoped<IDocumentService, DocumentService>()
             .AddScoped<IAuthApiService, AuthApiService>();
     }
