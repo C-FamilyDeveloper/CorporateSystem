@@ -96,6 +96,16 @@ internal class DocumentService(
         }, cancellationToken);
     }
 
+    public Task<IEnumerable<Document>> GetCurrentUserDocuments(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        return documentRepository.GetAsync(new DocumentFilter
+        {
+            OwnerIds = [userId]
+        }, cancellationToken);
+    }
+
     public async Task UpdateDocumentContentAsync(
         UpdateDocumentContentDto dto,
         CancellationToken cancellationToken = default)

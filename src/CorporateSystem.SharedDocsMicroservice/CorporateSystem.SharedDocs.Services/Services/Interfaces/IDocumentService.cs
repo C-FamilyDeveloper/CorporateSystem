@@ -9,6 +9,7 @@ public interface IDocumentService
     Task AddUsersToDocumentAsync(AddUserToDocumentDto dto, CancellationToken cancellationToken = default);
     Task<string[]> GetUserEmailsOfCurrentDocumentAsync(int documentId, CancellationToken cancellationToken = default);
     Task<IEnumerable<DocumentUser>> GetDocumentUsersAsync(GetDocumentUsersDto dto, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Document>> GetCurrentUserDocuments(int userId, CancellationToken cancellationToken = default);
     Task UpdateDocumentContentAsync(UpdateDocumentContentDto dto, CancellationToken cancellationToken = default);
     Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default);
 }

@@ -352,4 +352,63 @@ public class DocumentServiceTests
             It.Is<int[]>(ids => ids.SequenceEqual(documentIds)),
             It.IsAny<CancellationToken>()), Times.Once);
     }
+    
+    [Fact]
+    public async Task GetCurrentUserDocuments_ReturnsDocumentsForGivenUserId()
+    {
+        // Arrange
+        var userId = 1;
+        var expectedDocuments = new[]
+        {
+            new Document 
+            { 
+                Id = 1,
+                OwnerId = userId,
+                Title = "Doc1",
+                CreatedAt = DateTimeOffset.UtcNow,
+                ModifiedAt = null
+            },
+            new Document
+            {
+                Id = 2,
+                OwnerId = userId,
+                Title = "Doc2",
+                CreatedAt = DateTimeOffset.UtcNow,
+                ModifiedAt = null
+            }
+        };
+        
+        _mockDocumentRepository
+            .Setup(repo => repo.GetAsync(
+                It.IsAny<DocumentFilter>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedDocuments);
+
+        // Act
+        var result = (await _documentService.GetCurrentUserDocuments(userId)).ToArray();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count());
+        Assert.All(result, doc => Assert.Equal(userId, doc.OwnerId));
+    }
+
+    [Fact]
+    public async Task GetCurrentUserDocuments_ReturnsEmptyList_WhenNoDocumentsFound()
+    {
+        var notExistingUserId = 999;
+        
+        _mockDocumentRepository
+            .Setup(repo => repo.GetAsync(
+                It.IsAny<DocumentFilter>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        // Act
+        var result = await _documentService.GetCurrentUserDocuments(notExistingUserId);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
 }

@@ -18,7 +18,6 @@ public class InitMigration : Migration
         Create.Table("document_users")
             .WithColumn("id").AsInt32().PrimaryKey().Identity()
             .WithColumn("document_id").AsInt32().NotNullable()
-            .ForeignKey("fk_document_users_documents", "documents", "id").OnDelete(System.Data.Rule.Cascade)
             .WithColumn("user_id").AsInt32().NotNullable()
             .WithColumn("access_level").AsInt32().NotNullable();
         

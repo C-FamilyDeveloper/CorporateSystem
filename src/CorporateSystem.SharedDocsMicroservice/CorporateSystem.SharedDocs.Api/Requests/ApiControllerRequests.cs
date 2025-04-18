@@ -21,3 +21,12 @@ public class DocumentUserInfoDto
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AccessLevel AccessLevel { get; init; }
 }
+
+public class GetDocumentsResponse
+{
+    [JsonPropertyName("id")]
+    public int Id { get; init; }
+    
+    [JsonPropertyName("title")]
+    public required string Title { get; init; }
+}

@@ -39,4 +39,35 @@ public class ApiController(IDocumentService documentService, IAuthApiService aut
 
         return Ok();
     }
+
+    [HttpGet("get-documents-for-current-user")]
+    public async Task<IActionResult> GetDocumentForCurrentUser()
+    {
+        if (!HttpContext.Items.TryGetValue("UserInfo", out var value))
+        {
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+
+        var userInfo = value as UserInfo;
+
+        if (userInfo == null)
+        {
+            return BadRequest("Что-то пошло не так");
+        }
+
+        var userId = userInfo.Id;
+        var documents = await documentService.GetCurrentUserDocuments(userId);
+
+        var documentsArray = documents.ToArray();
+
+        var result = documentsArray
+            .Select(document => new GetDocumentsResponse
+            {
+                Id = document.Id,
+                Title = document.Title
+            })
+            .ToArray();
+        
+        return Ok(result);
+    }
 }
