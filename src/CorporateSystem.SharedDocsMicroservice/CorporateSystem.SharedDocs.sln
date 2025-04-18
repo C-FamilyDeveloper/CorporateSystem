@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Domain", "CorporateSystem.SharedDocs.Domain\CorporateSystem.SharedDocs.Domain.csproj", "{734DFDAE-8021-4D4D-8B52-80D6247DCF82}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Infrastructure", "CorporateSystem.SharedDocs.Infrastructure\CorporateSystem.SharedDocs.Infrastructure.csproj", "{90E969B2-5864-4878-8955-F4BE1AF4851E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Services", "CorporateSystem.SharedDocs.Services\CorporateSystem.SharedDocs.Services.csproj", "{A899ACB4-E096-4E9E-AB56-41247B47DA56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Api", "CorporateSystem.SharedDocs.Api\CorporateSystem.SharedDocs.Api.csproj", "{71C39201-98C9-4354-8F43-C66E97E0E15E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CA0C4285-0A40-4F0C-8C38-D5D9866335BA}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yaml = docker-compose.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.SharedDocs.Tests", "CorporateSystem.SharedDocs.Tests\CorporateSystem.SharedDocs.Tests.csproj", "{642FE3E9-F099-45F1-A3B5-598285914BBC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{734DFDAE-8021-4D4D-8B52-80D6247DCF82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{734DFDAE-8021-4D4D-8B52-80D6247DCF82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{734DFDAE-8021-4D4D-8B52-80D6247DCF82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{734DFDAE-8021-4D4D-8B52-80D6247DCF82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90E969B2-5864-4878-8955-F4BE1AF4851E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90E969B2-5864-4878-8955-F4BE1AF4851E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90E969B2-5864-4878-8955-F4BE1AF4851E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90E969B2-5864-4878-8955-F4BE1AF4851E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A899ACB4-E096-4E9E-AB56-41247B47DA56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A899ACB4-E096-4E9E-AB56-41247B47DA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A899ACB4-E096-4E9E-AB56-41247B47DA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A899ACB4-E096-4E9E-AB56-41247B47DA56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71C39201-98C9-4354-8F43-C66E97E0E15E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{642FE3E9-F099-45F1-A3B5-598285914BBC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
