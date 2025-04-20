@@ -179,4 +179,73 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         var responseBody = await response.Content.ReadAsStringAsync();
         responseBody.Should().Contain("Отсутствует информация о пользователе");
     }
+    
+    [Fact]
+    public async Task CreateDocument_ReturnsCreatedDocument_WhenRequestIsValid()
+    {
+        // Arrange
+        var httpClient = factory.CreateClient();
+
+        var userInfo = new UserInfo { Id = 1, Role = "Writer" };
+        var request = new CreateDocumentRequest { Title = "New Document" };
+        
+        factory.MockDocumentService
+            .Setup(service => service.CreateDocumentAsync(
+                It.Is<CreateDocumentDto>(dto =>
+                    dto.Title == request.Title &&
+                    dto.Content == string.Empty &&
+                    dto.OwnerId == userInfo.Id),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/create-document")
+        {
+            Content = JsonContent.Create(request)
+        };
+        httpRequest.Headers.Add("UserInfo", JsonSerializer.Serialize(userInfo));
+
+        // Act
+        var response = await httpClient.SendAsync(httpRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var responseBody = await response.Content.ReadFromJsonAsync<CreateDocumentResponse>();
+        responseBody.Should().NotBeNull();
+        responseBody.Id.Should().Be(1);
+        responseBody.Title.Should().Be(request.Title);
+        responseBody.Content.Should().Be(string.Empty);
+        
+        factory.MockDocumentService.Verify(
+            service => service.CreateDocumentAsync(
+                It.Is<CreateDocumentDto>(dto =>
+                    dto.Title == request.Title &&
+                    dto.Content == string.Empty &&
+                    dto.OwnerId == userInfo.Id),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateDocument_ReturnsBadRequest_WhenUserInfoIsMissing()
+    {
+        // Arrange
+        var httpClient = factory.CreateClient();
+
+        var request = new CreateDocumentRequest { Title = "New Document" };
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/create-document")
+        {
+            Content = JsonContent.Create(request)
+        };
+
+        // Act
+        var response = await httpClient.SendAsync(httpRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        responseBody.Should().Contain("Отсутствует информация о пользователе");
+    }
 }
