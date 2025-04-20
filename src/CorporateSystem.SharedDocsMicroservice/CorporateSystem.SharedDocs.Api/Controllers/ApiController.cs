@@ -70,4 +70,32 @@ public class ApiController(IDocumentService documentService, IAuthApiService aut
         
         return Ok(result);
     }
+
+    [HttpPost("create-document")]
+    public async Task<IActionResult> CreateDocument([FromBody] CreateDocumentRequest request)
+    {
+        if (!HttpContext.Items.TryGetValue("UserInfo", out var userInfoValue) || 
+            userInfoValue is not UserInfo userInfo)
+        {
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+        
+        var createDocumentDto = new CreateDocumentDto
+        {
+            Title = request.Title,
+            Content = string.Empty, // Content всегда пустой при создании
+            OwnerId = userInfo.Id
+        };
+        
+        var createdDocumentId = await documentService.CreateDocumentAsync(createDocumentDto);
+        
+        var response = new CreateDocumentResponse
+        {
+            Id = createdDocumentId,
+            Title = request.Title,
+            Content = string.Empty
+        };
+
+        return Ok(response);
+    }
 }
