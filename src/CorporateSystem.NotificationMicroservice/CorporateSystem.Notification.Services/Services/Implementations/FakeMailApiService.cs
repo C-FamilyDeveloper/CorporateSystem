@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
-internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions) 
+internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions, ILogger<FakeMailApiService> logger) 
     : IFakeMailApiService
 {
     public async Task SendEmailMessageAsync(
@@ -25,6 +25,7 @@ internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions)
         };
 
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
+        logger.LogInformation($"{nameof(SendEmailMessageAsync)}: response status code={responseMessage.StatusCode}");
         responseMessage.EnsureSuccessStatusCode();
     }
 
@@ -42,6 +43,7 @@ internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions)
         };
 
         var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
+        logger.LogInformation($"{nameof(GetEmailByTokenAsync)}: response status code={responseMessage.StatusCode}");
         responseMessage.EnsureSuccessStatusCode();
         
         return (await responseMessage.Content.ReadFromJsonAsync<GetEmailByTokenResponse>(cancellationToken))!;

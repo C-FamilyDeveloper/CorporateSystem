@@ -18,6 +18,8 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(SignIn)}: connectionId={HttpContext.Connection.Id}");
+            
             var token = await authService
                 .AuthenticateAsync(new AuthUserDto(request.Email, request.Password));
             
@@ -28,12 +30,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (ExceptionWithStatusCode e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(SignIn)}: {e.Message}");
             return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(SignIn)}: {e.Message}");
             return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
@@ -45,6 +47,8 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(SignUp)}: connectionId={HttpContext.Connection.Id}");
+            
             await registrationService
                 .RegisterAsync(
                     new RegisterUserDto(request.Email, request.Password, request.RepeatedPassword));
@@ -53,12 +57,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (ExceptionWithStatusCode e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(SignUp)}: {e.Message}");
             return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex.Message);
+            logger.LogError($"{nameof(SignUp)}: {ex.Message}");
             return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
@@ -70,8 +74,13 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(SuccessRegistration)}: connectionId={HttpContext.Connection.Id}");
+            
             if (request is null)
+            {
+                logger.LogError($"{nameof(SuccessRegistration)}: request=null");
                 throw new Exception("Некорректный запрос");
+            }
 
             await registrationService
                 .SuccessRegisterAsync(new SuccessRegisterUserDto(request.Email, request.Password, request.SuccessCode));
@@ -80,12 +89,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (ExceptionWithStatusCode e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(SuccessRegistration)}: {e.Message}");
             return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(SuccessRegistration)}: {e.Message}");
             return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
@@ -97,10 +106,13 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(ValidateToken)}: connectionId={HttpContext.Connection.Id}");
+            
             var isValid = authService.ValidateToken(request.Token);
             
             if (!isValid)
             {
+                logger.LogError($"{nameof(ValidateToken)}: Token={request.Token} is not valid");
                 return Unauthorized("Invalid token.");
             }
 
@@ -109,12 +121,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (ExceptionWithStatusCode e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(ValidateToken)}: {e.Message}");
             return StatusCode((int)e.StatusCode, e.Message);
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(ValidateToken)}: {e.Message}");
             return StatusCode(StatusCodes.Status401Unauthorized, "Token validation failed.");
         }
     }
@@ -126,9 +138,13 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(GetUserEmailsById)}: connectionId={HttpContext.Connection.Id}");
+            
             var users = await userService.GetUsersByIdsAsync(request.UserIds);
             var emails = users.Select(user => user.Email).ToArray();
 
+            logger.LogInformation($"{nameof(GetUserEmailsById)}: emails={string.Join(",", emails)}");
+            
             return Ok(new GetUserEmailsByIdsResponse
             {
                 UserEmails = emails
@@ -136,7 +152,7 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(GetUserEmailsById)}: {e.Message}");
             return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
@@ -148,9 +164,13 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         try
         {
+            logger.LogInformation($"{nameof(GetUserIdsByEmail)}: connectionId={HttpContext.Connection.Id}");
+            
             var users = await userService.GetUsersByEmailsAsync(request.UserEmails);
             var ids = users.Select(user => user.Id).ToArray();
-
+            
+            logger.LogInformation($"{nameof(GetUserIdsByEmail)}: ids={string.Join(",", ids)}");
+            
             return Ok(new GetUserIdsByEmailsResponse
             {
                 UserIds = ids
@@ -158,7 +178,7 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(GetUserIdsByEmail)}: {e.Message}");
             return StatusCode(StatusCodes.Status400BadRequest, "Что-то пошло не так");
         }
     }
@@ -173,6 +193,7 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         
         if (userIdClaim == null || roleClaim == null)
         {
+            logger.LogError($"{nameof(GetUserInfoByToken)}: Token={token}, userIdClaim={userIdClaim?.Value} roleClaim={roleClaim?.Value}");
             throw new InvalidOperationException("Invalid token claims.");
         }
 

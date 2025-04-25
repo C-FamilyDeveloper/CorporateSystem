@@ -141,7 +141,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
             .ReturnsAsync(documents);
         
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/get-documents-for-current-user");
-        request.Headers.Add("UserInfo", JsonSerializer.Serialize(userInfo));
+        request.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
 
         // Act
         var response = await httpClient.SendAsync(request);
@@ -202,7 +202,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         {
             Content = JsonContent.Create(request)
         };
-        httpRequest.Headers.Add("UserInfo", JsonSerializer.Serialize(userInfo));
+        httpRequest.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
 
         // Act
         var response = await httpClient.SendAsync(httpRequest);

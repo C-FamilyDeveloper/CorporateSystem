@@ -106,7 +106,7 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
             .WithUrl(_hubUri, options =>
             {
                 options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
-                options.Headers.Add("UserInfo", JsonSerializer.Serialize(userInfo));
+                options.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
             })
             .Build();
     }

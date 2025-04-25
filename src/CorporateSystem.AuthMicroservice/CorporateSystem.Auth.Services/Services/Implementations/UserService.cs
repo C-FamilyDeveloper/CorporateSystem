@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 [assembly:InternalsVisibleTo("CorporateSystem.Auth.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
 internal class UserService(
@@ -42,6 +43,10 @@ internal class UserService(
 
         if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
         {
+            logger.LogInformation(user is null
+                ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
+                : $"{nameof(AuthenticateAsync)}: email={dto.Email}, actual_password={dto.Password}, expected_password={user.Password}");
+            
             throw new ExceptionWithStatusCode("Неправильный логин или пароль", HttpStatusCode.Unauthorized);
         }
         
@@ -99,21 +104,30 @@ internal class UserService(
     {
         if (dto.Password != dto.RepeatedPassword)
         {
+            logger.LogInformation($"{nameof(RegisterAsync)}: password={dto.Password}, repeated password={dto.RepeatedPassword}");
             throw new ExceptionWithStatusCode("Пароли не совпадают", HttpStatusCode.BadRequest);
         }
 
+        var existingUser = await userRepository.GetUserByEmailAsync(dto.Email, cancellationToken);
+
+        if (existingUser is not null)
+        {
+            logger.LogInformation($"{nameof(RegisterAsync)}: User с email={dto.Email} уже существует");
+            throw new ExceptionWithStatusCode("Данная почта уже занята", HttpStatusCode.BadRequest);
+        }
+        
         int code;
         do
         {
             code = Random.Shared.Next(100_000, 1_000_000);
         } while (await registrationCodesRepository.GetAsync(code, cancellationToken) is not null);
         
-        logger.LogInformation($"Created code: {code}");
+        logger.LogInformation($"{nameof(RegisterAsync)}: Created code: {code}");
         
         await registrationCodesRepository.CreateAsync(code, cancellationToken);
         
-        logger.LogInformation($"Code {code} was written in redis");
-        logger.LogInformation("Writing message to notification microservice");
+        logger.LogInformation($"{nameof(RegisterAsync)}: Code {code} was written in redis");
+        logger.LogInformation($"{nameof(RegisterAsync)}: Writing message to notification microservice");
         
         await grpcNotificationClient.SendMessageAsync(new SendMessageRequest
         {
@@ -122,7 +136,8 @@ internal class UserService(
             ReceiverEmails = { dto.Email },
             Token = _notificationOptions.Token
         }, cancellationToken);
-        logger.LogInformation("Sending to notification is completed");
+        
+        logger.LogInformation($"{nameof(RegisterAsync)}: Sending to notification is completed");
     }
 
     public async Task SuccessRegisterAsync(SuccessRegisterUserDto dto, CancellationToken cancellationToken = default)
@@ -146,17 +161,17 @@ internal class UserService(
         await userRepository.AddUserAsync(addUserDto, cancellationToken);
     }
 
-    public Task<IEnumerable<User>> GetUsersByIdsAsync(int[] ids, CancellationToken cancellationToken = default)
+    public Task<User[]> GetUsersByIdsAsync(int[] ids, CancellationToken cancellationToken = default)
     {
         return contextFactory.ExecuteWithoutCommitAsync(context =>
         {
             return Task.FromResult(context.Users
                 .Where(user => ids.Contains(user.Id))
-                .AsEnumerable());
+                .ToArray());
         }, cancellationToken: cancellationToken);
     }
 
-    public Task<IEnumerable<User>> GetUsersByEmailsAsync(
+    public Task<User[]> GetUsersByEmailsAsync(
         string[] emails,
         CancellationToken cancellationToken = default)
     {
@@ -164,7 +179,7 @@ internal class UserService(
         {
             return Task.FromResult(context.Users
                 .Where(user => emails.Contains(user.Email))
-                .AsEnumerable());
+                .ToArray());
         }, cancellationToken: cancellationToken);
     }
 }

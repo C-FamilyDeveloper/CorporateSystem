@@ -152,7 +152,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             new OptionsWrapper<JwtToken>(null),
             new OptionsWrapper<NotificationOptions>(null),
-            null);
+            Mock.Of<ILogger<UserService>>());
         
         // Assert
         await Assert.ThrowsAsync<ExceptionWithStatusCode>(async () =>
@@ -181,7 +181,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             new OptionsWrapper<JwtToken>(null),
             new OptionsWrapper<NotificationOptions>(null),
-            null);
+            Mock.Of<ILogger<UserService>>());
         
         // Assert
         await Assert.ThrowsAsync<ExceptionWithStatusCode>(async () =>
