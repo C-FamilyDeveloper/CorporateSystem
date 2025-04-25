@@ -16,7 +16,7 @@ internal static class DtoValidationExtensions
         }
         catch (ArgumentException e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(ShouldBeValid)}: {e.Message}");
             throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest, e);
         }
     }
