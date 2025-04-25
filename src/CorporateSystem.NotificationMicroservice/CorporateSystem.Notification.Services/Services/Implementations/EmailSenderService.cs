@@ -1,19 +1,21 @@
 ﻿using CorporateSystem.Services.Dtos;
 using CorporateSystem.Services.Extensions;
 using CorporateSystem.Services.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
 internal class EmailSenderService(
     IMailService mailService,
-    IFakeMailService fakeMailService) 
+    IFakeMailService fakeMailService, 
+    ILogger<EmailSenderService> logger) 
     : IEmailSenderService
 {
     public async Task SendMailAsync(
         EmailSendDto dto,
         CancellationToken cancellationToken = default)
     {
-        dto.MustBeValid();
+        dto.MustBeValid(logger);
 
         var fakeEmails = new List<string>();
         var emails = new List<string>();
@@ -29,6 +31,9 @@ internal class EmailSenderService(
                 emails.Add(receiverEmail);
             }
         }
+        
+        logger.LogInformation($"{nameof(SendMailAsync)}: fakeEmails={string.Join(",", fakeEmails)}");
+        logger.LogInformation($"{nameof(SendMailAsync)}: emails={string.Join(",", emails)}");
         
         var tasks = new List<Task>
         {

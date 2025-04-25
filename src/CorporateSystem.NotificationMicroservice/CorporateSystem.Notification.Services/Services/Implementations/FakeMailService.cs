@@ -16,7 +16,7 @@ internal class FakeMailService(
 {
     public async Task SendMailAsync(SendMailDto dto, CancellationToken cancellationToken = default)
     {
-        dto.MustBeValid();
+        dto.MustBeValid(logger);
         
         var request = new SendEmailMessageRequest
         {
@@ -26,17 +26,17 @@ internal class FakeMailService(
             Token = dto.Token
         };
         
-        logger.LogInformation("Call method: SendEmailMessageAsync");
+        logger.LogInformation($"{nameof(SendMailAsync)}: Call method: SendEmailMessageAsync");
         
         await fakeMailApiService.SendEmailMessageAsync(request, cancellationToken);
 
-        logger.LogInformation("Call method: GetEmailByTokenAsync");
+        logger.LogInformation($"{nameof(SendMailAsync)}: Call method: GetEmailByTokenAsync");
         var senderEmail = (await fakeMailApiService.GetEmailByTokenAsync(new GetEmailByTokenRequest
         {
             Token = dto.Token
         }, cancellationToken)).Email;
         
-        logger.LogInformation("Writing email message to db");
+        logger.LogInformation($"{nameof(SendMailAsync)}: Writing email message to db");
         await contextFactory.ExecuteWithCommitAsync(async context =>
         {
             foreach (var receiverEmail in dto.ReceiverEmails)
@@ -51,6 +51,6 @@ internal class FakeMailService(
             }
         }, IsolationLevel.ReadUncommitted, cancellationToken);
         
-        logger.LogInformation("Writing completed successfully");
+        logger.LogInformation($"{nameof(SendMailAsync)}: Writing completed successfully");
     }
 }
