@@ -36,18 +36,19 @@ internal class AuthApiService(
             var httpMessage = new HttpRequestMessage
             {
                 Content = JsonContent.Create(request),
-                RequestUri = new Uri(httpClient.BaseAddress, "/api/get-user-emails-by-id"),
+                RequestUri = new Uri(httpClient.BaseAddress, "/api/auth/get-user-emails-by-id"),
                 Method = HttpMethod.Post
             };
 
             var response = await httpClient.SendAsync(httpMessage, cancellationToken);
-            logger.LogInformation($"Response status code: {response.StatusCode}");
+            logger.LogInformation($"{nameof(GetUserEmailsByIdsAsync)}: Response status code: {response.StatusCode}");
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadFromJsonAsync<GetUserEmailsByIdsResponse>(cancellationToken);
 
             if (data is null)
             {
+                logger.LogError($"{nameof(GetUserEmailsByIdsAsync)}: data=null");
                 throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest);
             }
             
@@ -55,7 +56,7 @@ internal class AuthApiService(
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(GetUserEmailsByIdsAsync)}: {e.Message}");
             throw;
         }
     }
@@ -74,21 +75,26 @@ internal class AuthApiService(
                 UserEmails = emails
             };
 
+            logger.LogInformation($"{nameof(GetUserIdsByEmailsAsync)}: emails={string.Join(",", emails)}");
+            
             var httpMessage = new HttpRequestMessage
             {
                 Content = JsonContent.Create(request),
-                RequestUri = new Uri(httpClient.BaseAddress, "/api/get-user-ids-by-email"),
+                RequestUri = new Uri(httpClient.BaseAddress, "/api/auth/get-user-ids-by-email"),
                 Method = HttpMethod.Post
             };
 
+            logger.LogInformation($"{nameof(GetUserIdsByEmailsAsync)}: Request path={httpMessage.RequestUri.ToString()}");
+            
             var response = await httpClient.SendAsync(httpMessage, cancellationToken);
-            logger.LogInformation($"Response status code: {response.StatusCode}");
+            logger.LogInformation($"{nameof(GetUserIdsByEmailsAsync)}: Response status code: {response.StatusCode}");
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadFromJsonAsync<GetUserIdsByEmailsResponse>(cancellationToken);
 
             if (data is null)
             {
+                logger.LogError($"{nameof(GetUserIdsByEmailsAsync)}: data is null");
                 throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest);
             }
             
@@ -96,7 +102,7 @@ internal class AuthApiService(
         }
         catch (Exception e)
         {
-            logger.LogError(e.Message);
+            logger.LogError($"{nameof(GetUserIdsByEmailsAsync)}: {e.Message}");
             throw;
         }
     }

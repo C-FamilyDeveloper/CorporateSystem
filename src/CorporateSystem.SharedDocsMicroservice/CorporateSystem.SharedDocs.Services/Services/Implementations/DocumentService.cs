@@ -31,7 +31,9 @@ internal class DocumentService(
 
     public async Task AddUsersToDocumentAsync(AddUserToDocumentDto dto, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: dto.UserInfos.Count={dto.UserInfos.Length}");
         var document = await GetDocumentOrThrowExceptionAsync(dto.DocumentId, cancellationToken);
+        logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: document.Id={document.Id}");
 
         var currentDocumentUsers = await documentUserRepository.GetAsync(new DocumentUserFilter
         {
@@ -44,13 +46,15 @@ internal class DocumentService(
             .Select(documentUser => documentUser.UserId)
             .ToList();
 
+        logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: currentDocumentUserIds.Count={currentDocumentUserIds.Count}");
+        
         var userIdsWhichNeedAdded = new List<DocumentUserInfo>();
         
         foreach (var userInfo in dto.UserInfos)
         {
             if (currentDocumentUserIds.Contains(userInfo.UserId))
             {
-                logger.LogError($"Попытка добавить пользователя с идентификатором {userInfo.UserId}, который уже был добавлен ранее к текущему документу");
+                logger.LogError($"{nameof(AddUsersToDocumentAsync)} Попытка добавить пользователя с идентификатором {userInfo.UserId}, который уже был добавлен ранее к текущему документу");
                 throw new ExceptionWithStatusCode(
                     "Попытка добавить уже существующего пользователя",
                     HttpStatusCode.BadRequest);
@@ -59,12 +63,16 @@ internal class DocumentService(
             userIdsWhichNeedAdded.Add(userInfo);
         }
         
+        logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: {userIdsWhichNeedAdded.Count} пользователей будет добавлено к документу");
+        
         await documentUserRepository
             .CreateAsync(
                 userIdsWhichNeedAdded
                     .Select(userInfo => new CreateDocumentUserDto(dto.DocumentId, userInfo.UserId, userInfo.AccessLevel))
                     .ToArray(),
                 cancellationToken);
+        
+        logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: Completed");
     }
 
     public async Task<string[]> GetUserEmailsOfCurrentDocumentAsync(
@@ -122,7 +130,7 @@ internal class DocumentService(
 
         if (currentUser.AccessLevel is not AccessLevel.Writer)
         {
-            logger.LogError($"User с id={currentUser.UserId} попытался изменить файл, в котором у него доступ AccessLevel={currentUser.AccessLevel.ToString()}");
+            logger.LogError($"{nameof(UpdateDocumentContentAsync)}: User с id={currentUser.UserId} попытался изменить файл, в котором у него доступ AccessLevel={currentUser.AccessLevel.ToString()}");
             throw new ExceptionWithStatusCode(
                 "У вас недостаточно прав для выполнения этой операции",
                 HttpStatusCode.Forbidden);
@@ -146,7 +154,7 @@ internal class DocumentService(
 
         if (document is null)
         {
-            logger.LogError($"Документ с идентификатором {id} не найден");
+            logger.LogError($"{nameof(GetDocumentOrThrowExceptionAsync)}: Документ с идентификатором {id} не найден");
             throw new ExceptionWithStatusCode(
                 $"Документ с идентификатором {id} не найден",
                 HttpStatusCode.NotFound);
