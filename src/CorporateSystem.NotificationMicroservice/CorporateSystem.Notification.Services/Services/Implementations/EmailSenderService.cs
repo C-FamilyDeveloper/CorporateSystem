@@ -31,15 +31,26 @@ internal class EmailSenderService(
                 emails.Add(receiverEmail);
             }
         }
-        
-        logger.LogInformation($"{nameof(SendMailAsync)}: fakeEmails={string.Join(",", fakeEmails)}");
-        logger.LogInformation($"{nameof(SendMailAsync)}: emails={string.Join(",", emails)}");
-        
-        var tasks = new List<Task>
+
+        var tasks = new List<Task>();
+
+        if (fakeEmails.Any())
         {
-            mailService.SendMailAsync(new SendMailDto(dto.Token, dto.Title, dto.Message, emails.ToArray()), cancellationToken),
-            fakeMailService.SendMailAsync(new SendMailDto(dto.Token, dto.Title, dto.Message, fakeEmails.ToArray()), cancellationToken)
-        };
+            logger.LogInformation($"{nameof(SendMailAsync)}: sending {fakeEmails.Count} fake messages");
+            logger.LogInformation($"{nameof(SendMailAsync)}: fakeEmails={string.Join(",", fakeEmails)}");
+            tasks.Add(fakeMailService
+                .SendMailAsync(new SendMailDto(dto.Token, dto.Title, dto.Message, fakeEmails.ToArray()),
+                    cancellationToken));
+        }
+
+        if (emails.Any())
+        {
+            logger.LogInformation($"{nameof(SendMailAsync)}: sending {emails.Count} messages");
+            logger.LogInformation($"{nameof(SendMailAsync)}: emails={string.Join(",", emails)}");
+            tasks.Add(mailService
+                .SendMailAsync(new SendMailDto(dto.Token, dto.Title, dto.Message, emails.ToArray()),
+                    cancellationToken));
+        }
 
         await Task.WhenAll(tasks);
     }

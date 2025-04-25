@@ -108,6 +108,14 @@ internal class UserService(
             throw new ExceptionWithStatusCode("Пароли не совпадают", HttpStatusCode.BadRequest);
         }
 
+        var existingUser = await userRepository.GetUserByEmailAsync(dto.Email, cancellationToken);
+
+        if (existingUser is not null)
+        {
+            logger.LogInformation($"{nameof(RegisterAsync)}: User с email={dto.Email} уже существует");
+            throw new ExceptionWithStatusCode("Данная почта уже занята", HttpStatusCode.BadRequest);
+        }
+        
         int code;
         do
         {
