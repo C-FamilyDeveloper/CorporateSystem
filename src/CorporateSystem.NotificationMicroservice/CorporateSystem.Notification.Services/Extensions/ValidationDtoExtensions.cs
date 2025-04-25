@@ -17,6 +17,7 @@ internal static class ValidationDtoExtensions
         catch (Exception e)
         {
             logger.LogError($"{nameof(MustBeValid)}: {e.Message}");
+            throw;
         }
     }
 
@@ -32,6 +33,7 @@ internal static class ValidationDtoExtensions
         catch (Exception e)
         {
             logger.LogError($"{nameof(MustBeValid)}: {e.Message}");
+            throw;
         }
     }
 }

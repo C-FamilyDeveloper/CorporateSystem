@@ -130,7 +130,8 @@ internal class DocumentService(
 
         if (currentUser.AccessLevel is not AccessLevel.Writer)
         {
-            logger.LogError($"{nameof(UpdateDocumentContentAsync)}: User с id={currentUser.UserId} попытался изменить файл, в котором у него доступ AccessLevel={currentUser.AccessLevel.ToString()}");
+            logger.LogError(
+                $"{nameof(UpdateDocumentContentAsync)}: User с id={currentUser.UserId} попытался изменить файл (document id={document.Id}), в котором у него доступ AccessLevel={currentUser.AccessLevel.ToString()}");
             throw new ExceptionWithStatusCode(
                 "У вас недостаточно прав для выполнения этой операции",
                 HttpStatusCode.Forbidden);

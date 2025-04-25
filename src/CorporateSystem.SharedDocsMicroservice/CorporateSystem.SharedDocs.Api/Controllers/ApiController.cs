@@ -67,6 +67,7 @@ public class ApiController(
 
             if (userInfo == null)
             {
+                logger.LogInformation($"{nameof(GetDocumentForCurrentUser)}: userInfo=null");
                 return BadRequest("Что-то пошло не так");
             }
 
@@ -105,6 +106,12 @@ public class ApiController(
         {
             var userInfo = JsonSerializer.Deserialize<UserInfo>(userInfoValue);
 
+            if (userInfo == null)
+            {
+                logger.LogInformation($"{nameof(CreateDocument)}: userInfo=null");
+                return BadRequest("Что-то пошло не так");
+            }
+            
             var createDocumentDto = new CreateDocumentDto
             {
                 Title = request.Title,

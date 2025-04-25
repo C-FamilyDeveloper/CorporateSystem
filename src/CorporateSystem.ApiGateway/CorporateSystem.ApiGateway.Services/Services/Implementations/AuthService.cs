@@ -23,7 +23,7 @@ internal class AuthService(
                 Token = token
             }),
             Method = HttpMethod.Post,
-            RequestUri = new Uri($"{client.BaseAddress}api/auth/validate-token")
+            RequestUri = new Uri(client.BaseAddress, "/api/auth/validate-token")
         };
         
         var response = await client.SendAsync(request, cancellationToken);
