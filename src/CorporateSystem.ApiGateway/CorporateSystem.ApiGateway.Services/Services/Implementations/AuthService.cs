@@ -2,11 +2,14 @@
 using CorporateSystem.ApiGateway.Services.Dtos;
 using CorporateSystem.ApiGateway.Services.Options;
 using CorporateSystem.ApiGateway.Services.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.ApiGateway.Services.Services.Implementations;
 
-internal class AuthService(IOptions<AuthMicroserviceOptions> authMicroserviceOptions) : IAuthService
+internal class AuthService(
+    IOptions<AuthMicroserviceOptions> authMicroserviceOptions,
+    ILogger<AuthService> logger) : IAuthService
 {
     public async Task<UserInfo> GetUserInfoAsyncByToken(string token, CancellationToken cancellationToken = default)
     {
@@ -20,10 +23,13 @@ internal class AuthService(IOptions<AuthMicroserviceOptions> authMicroserviceOpt
                 Token = token
             }),
             Method = HttpMethod.Post,
-            RequestUri = new Uri($"{client.BaseAddress}/api/auth/validate-token")
+            RequestUri = new Uri($"{client.BaseAddress}api/auth/validate-token")
         };
-
+        
         var response = await client.SendAsync(request, cancellationToken);
+        logger.LogInformation(
+            $"{nameof(GetUserInfoAsyncByToken)}: response content={await response.Content.ReadAsStringAsync(cancellationToken)}");
+        
         response.EnsureSuccessStatusCode();
 
         var userInfo = await response.Content.ReadFromJsonAsync<UserInfo>(cancellationToken);
