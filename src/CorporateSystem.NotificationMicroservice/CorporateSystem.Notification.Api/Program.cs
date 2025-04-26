@@ -14,8 +14,7 @@ public partial class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
-// Настройка сервисов
+        
         builder.Services.AddOpenApi();
         builder.Services.AddControllers();
         builder.Services.AddNotificationInfrastructure();
@@ -34,6 +33,7 @@ public partial class Program
         builder.Services.AddGrpcReflection();
 
         builder.Services.Configure<FakeMailOptions>(builder.Configuration.GetSection("FakeMailOptions"));
+        builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailOptions"));
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
         builder.Services.AddDbContext<DataContext>(options =>
