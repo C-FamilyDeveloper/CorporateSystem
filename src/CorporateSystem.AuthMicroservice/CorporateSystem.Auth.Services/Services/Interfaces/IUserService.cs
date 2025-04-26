@@ -1,9 +1,9 @@
 ﻿using CorporateSystem.Auth.Domain.Entities;
+using CorporateSystem.Auth.Services.Services.Filters;
 
 namespace CorporateSystem.Auth.Services.Services.Interfaces;
 
 public interface IUserService
 {
-    Task<User[]> GetUsersByIdsAsync(int[] ids, CancellationToken cancellationToken = default);
-    Task<User[]> GetUsersByEmailsAsync(string[] emails, CancellationToken cancellationToken = default);
+    Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default);
 }

@@ -9,6 +9,7 @@ using CorporateSystem.Auth.Domain.Exceptions;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
+using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Grpc;
@@ -115,16 +116,20 @@ internal class UserService(
             logger.LogInformation($"{nameof(RegisterAsync)}: User с email={dto.Email} уже существует");
             throw new ExceptionWithStatusCode("Данная почта уже занята", HttpStatusCode.BadRequest);
         }
-        
-        int code;
-        do
+
+        if (await registrationCodesRepository.GetAsync([dto.Email], cancellationToken) != null)
         {
-            code = Random.Shared.Next(100_000, 1_000_000);
-        } while (await registrationCodesRepository.GetAsync(code, cancellationToken) is not null);
+            logger.LogInformation($"{nameof(RegisterAsync)}: ключ с {dto.Email} уже сущесвует");
+            throw new ExceptionWithStatusCode(
+                "Вам на почту уже отправлен код. Попробуйте получить новый позже.",
+                HttpStatusCode.BadRequest);
+        }
+        
+        var code = Random.Shared.Next(100_000, 1_000_000);
         
         logger.LogInformation($"{nameof(RegisterAsync)}: Created code: {code}");
         
-        await registrationCodesRepository.CreateAsync(code, cancellationToken);
+        await registrationCodesRepository.CreateAsync([dto.Email], code, cancellationToken);
         
         logger.LogInformation($"{nameof(RegisterAsync)}: Code {code} was written in redis");
         logger.LogInformation($"{nameof(RegisterAsync)}: Writing message to notification microservice");
@@ -144,12 +149,12 @@ internal class UserService(
     {
         dto.ShouldBeValid(logger);
 
-        if (await registrationCodesRepository.GetAsync(dto.SuccessCode, cancellationToken) is null)
+        if (await registrationCodesRepository.GetAsync([dto.Email], cancellationToken) is null)
         {
             throw new ExceptionWithStatusCode("Неверный код", HttpStatusCode.BadRequest);
         }
 
-        await registrationCodesRepository.DeleteAsync(dto.SuccessCode, cancellationToken);
+        await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
         
         var addUserDto = new AddUserDto
         {
@@ -161,25 +166,33 @@ internal class UserService(
         await userRepository.AddUserAsync(addUserDto, cancellationToken);
     }
 
-    public Task<User[]> GetUsersByIdsAsync(int[] ids, CancellationToken cancellationToken = default)
+    public Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default)
     {
-        return contextFactory.ExecuteWithoutCommitAsync(context =>
+        return contextFactory.ExecuteWithoutCommitAsync(async context =>
         {
-            return Task.FromResult(context.Users
-                .Where(user => ids.Contains(user.Id))
-                .ToArray());
-        }, cancellationToken: cancellationToken);
-    }
+            var users = context.Users.AsQueryable();
 
-    public Task<User[]> GetUsersByEmailsAsync(
-        string[] emails,
-        CancellationToken cancellationToken = default)
-    {
-        return contextFactory.ExecuteWithoutCommitAsync(context =>
-        {
-            return Task.FromResult(context.Users
-                .Where(user => emails.Contains(user.Email))
-                .ToArray());
+            if (filter.Ids.IsNotNullAndNotEmpty())
+            {
+                users = users.Where(user => filter.Ids!.Contains(user.Id));
+            }
+
+            if (filter.Passwords.IsNotNullAndNotEmpty())
+            {
+                users = users.Where(user => filter.Passwords!.Contains(user.Password));
+            }
+
+            if (filter.Emails.IsNotNullAndNotEmpty())
+            {
+                users = users.Where(user => filter.Emails!.Contains(user.Email));
+            }
+
+            if (filter.Roles.IsNotNullAndNotEmpty())
+            {
+                users = users.Where(user => filter.Roles!.Contains(user.Role));
+            }
+
+            return await users.ToArrayAsync(cancellationToken);
         }, cancellationToken: cancellationToken);
     }
 }

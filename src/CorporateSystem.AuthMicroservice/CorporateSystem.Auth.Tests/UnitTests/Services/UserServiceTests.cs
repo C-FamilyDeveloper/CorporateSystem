@@ -28,9 +28,12 @@ public class UserServiceTests : IClassFixture<TestFixture>
         using var testFixture = new TestFixture();
         var registrationCodesRepositoryMock = new Mock<IRegistrationCodesRepository>();
 
+        var email = "test@bobr.ru";
+        var password = "password";
+        
         var dataContext = testFixture.GetService<DataContext>();
         registrationCodesRepositoryMock
-            .Setup(x => x.GetAsync(successCode, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetAsync(new object[] { email }, It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => successCode);
         
         var userService = new UserService(
@@ -42,9 +45,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IOptions<JwtToken>>(),
             new OptionsWrapper<NotificationOptions>(null),
             null);
-
-        var email = "test@bobr.ru";
-        var password = "password";
         
         // Arrange
         var request = new SuccessRegisterUserDto(email, password, successCode);
@@ -53,7 +53,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
         
         // Assert
         registrationCodesRepositoryMock.Verify(x => 
-            x.DeleteAsync(successCode, It.IsAny<CancellationToken>()), Times.Once);
+            x.DeleteAsync(new object[] { email }, It.IsAny<CancellationToken>()), Times.Once);
         
         Assert.Single(dataContext.Users);
         Assert.Equal(email, dataContext.Users.Single().Email);
@@ -68,7 +68,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
 
         registrationCodesRepositoryMock
             .Setup(x =>
-                x.GetAsync(It.IsAny<int>(),
+                x.GetAsync(It.IsAny<object[]>(),
                     It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => null);
         // Arrange
