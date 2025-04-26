@@ -33,10 +33,9 @@ public class Startup
         services.Configure<NotificationOptions>(Configuration.GetSection("NotificationOptions"));
         services.Configure<GrpcNotificationOptions>(Configuration.GetSection("GrpcNotificationOptions"));
         
-        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        services.AddStackExchangeRedisCache(options =>
         {
-            var redisOptions = sp.GetRequiredService<IOptions<RedisOptions>>().Value;
-            return ConnectionMultiplexer.Connect(redisOptions.ConnectionString);
+            options.Configuration = Configuration["RedisOptions:ConnectionString"];
         });
         
         var connectionString = Configuration.GetConnectionString("DefaultConnection");
