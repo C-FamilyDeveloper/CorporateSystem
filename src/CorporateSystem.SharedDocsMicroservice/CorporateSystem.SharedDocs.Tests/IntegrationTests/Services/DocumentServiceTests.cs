@@ -53,6 +53,13 @@ public class DocumentServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([1]);
 
+        _mockDocumentUserRepository
+            .Setup(repo =>
+                repo.CreateAsync(
+                    It.IsAny<CreateDocumentUserDto[]>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1]);
+
         // Act
         var result = await _documentService.CreateDocumentAsync(dto);
 
@@ -66,6 +73,11 @@ public class DocumentServiceTests
                 dtos[0].Title == dto.Title &&
                 dtos[0].Content == dto.Content),
             It.IsAny<CancellationToken>()), Times.Once);
+        
+        _mockDocumentUserRepository.Verify(repo =>
+            repo.CreateAsync(
+                It.IsAny<CreateDocumentUserDto[]>(),
+                It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
@@ -410,5 +422,72 @@ public class DocumentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDocumentsThatCurrentUserWasInvitedAsync_ReturnsDocumentsForCurrentUser()
+    {
+        // Arrange
+        var userId = 1;
+        
+        _mockDocumentUserRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.IsAny<DocumentInfoFilter>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new DocumentInfo { Id = 1, Title = "SomeTitle" }]);
+        
+        // Act
+        var result = await _documentService.GetDocumentsThatCurrentUserWasInvitedAsync(userId);
+        
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task GetDocumentAsync_ThrowException_WhenDocumentIsNull()
+    {
+        // Arrange
+        var documentId = 1;
+
+        _mockDocumentRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.Is<int>(value => value == documentId), 
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => null);
+        
+        // Act
+        var result = () => _documentService.GetDocumentAsync(documentId);
+
+        // Assert
+        await result.Should().ThrowAsync<ExceptionWithStatusCode>().WithMessage("Документ не был найден");
+    }
+    
+    [Fact]
+    public async Task GetDocumentAsync_ReturnsDocument()
+    {
+        // Arrange
+        var documentId = 1;
+
+        _mockDocumentRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.Is<int>(value => value == documentId), 
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Document
+            {
+                Content = "SomeContent",
+                Title = "SomeTitle", 
+                CreatedAt = DateTimeOffset.Now,
+                ModifiedAt = null
+            });
+        
+        // Act
+        var result = await _documentService.GetDocumentAsync(documentId);
+
+        // Assert
+        result.Should().NotBeNull();
     }
 }

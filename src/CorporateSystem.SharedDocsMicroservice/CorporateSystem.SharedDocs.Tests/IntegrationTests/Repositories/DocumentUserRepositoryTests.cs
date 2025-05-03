@@ -27,7 +27,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithExistingId_ReturnsDocumentUser()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var documentId = Int.GetUniqueNumber();
         var userId = Int.GetUniqueNumber();
@@ -57,7 +57,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithNonExistingId_ReturnsNull()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var id = Int.GetUniqueNumber();
         
@@ -72,7 +72,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithIdsFilter_ReturnsFilteredDocumentUsers()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
         
         var createDto1 = new CreateDocumentUserDto
         {
@@ -108,7 +108,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithAccessLevelsFilter_ReturnsFilteredDocumentUsers()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var documentId = Int.GetUniqueNumber();
         var userId = Int.GetUniqueNumber();
@@ -149,7 +149,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithUserIdsFilter_ReturnsFilteredDocumentUsers()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var documentId = Int.GetUniqueNumber();
         var userId = Int.GetUniqueNumber();
@@ -184,10 +184,121 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     }
     
     [Fact]
+    public async Task GetAsync_WithOwnerIdsFilter_ReturnsFilteredDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
+        var documentRepository = GetDocumentRepository();
+
+        var ownerId1 = Int.GetUniqueNumber();
+        var ownerId2 = Int.GetUniqueNumber();
+
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = ownerId1,
+            Title = "Doc1",
+            Content = "Content1"
+        };
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = ownerId2,
+            Title = "Doc2",
+            Content = "Content2"
+        };
+        
+        var createdDocumentIds = await documentRepository.CreateAsync([document1, document2]);
+
+        var documentUser1 = new CreateDocumentUserDto
+        {
+            DocumentId = createdDocumentIds[0],
+            AccessLevel = AccessLevel.Writer,
+            UserId = ownerId1
+        };
+
+        var documentUser2 = new CreateDocumentUserDto
+        {
+            DocumentId = createdDocumentIds[1],
+            AccessLevel = AccessLevel.Writer,
+            UserId = ownerId2
+        };
+
+        await repository.CreateAsync([documentUser1, documentUser2]);
+        
+        var filter = new DocumentInfoFilter
+        {
+            OwnerIds = [ownerId1]
+        };
+
+        // Act
+        var result = (await repository.GetAsync(filter)).ToArray();
+
+        // Assert
+        Assert.Single(result);
+        var documentInfo = result.First();
+        Assert.Equal(createdDocumentIds[0], documentInfo.Id);
+        Assert.Equal("Doc1", documentInfo.Title);
+    }
+    
+    [Fact]
+    public async Task GetAsync_WithFollowerIdsFilter_ReturnsFilteredDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
+        var documentRepository = GetDocumentRepository();
+        
+        var ownerId = Int.GetUniqueNumber();
+        var followerId1 = Int.GetUniqueNumber();
+        var followerId2 = Int.GetUniqueNumber();
+
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = ownerId,
+            Title = "Title1"
+        };
+        
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = ownerId,
+            Title = "Title2"
+        };
+
+        var documentIds = await documentRepository.CreateAsync([document1, document2]);
+        
+        var createDto1 = new CreateDocumentUserDto
+        {
+            DocumentId = documentIds[0],
+            UserId = followerId1,
+            AccessLevel = AccessLevel.Reader
+        };
+        
+        var createDto2 = new CreateDocumentUserDto
+        {
+            DocumentId = documentIds[1],
+            UserId = followerId2,
+            AccessLevel = AccessLevel.Writer
+        };
+
+        await repository.CreateAsync([createDto1, createDto2]);
+
+        var filter = new DocumentInfoFilter
+        {
+            FollowerIds = [followerId1]
+        };
+
+        // Act
+        var result = (await repository.GetAsync(filter)).ToArray();
+
+        // Assert
+        Assert.Single(result);
+        var documentInfo = result.First();
+        Assert.Equal(documentIds[0], documentInfo.Id);
+    }
+    
+    [Fact]
     public async Task CreateAsync_AddsSingleDocumentUserToDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var documentId = Int.GetUniqueNumber();
         var userId = Int.GetUniqueNumber();
@@ -215,7 +326,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task GetAsync_WithDocumentIdsFilter_ReturnsFilteredDocumentUsers()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var documentId = Int.GetUniqueNumber();
         
@@ -252,7 +363,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task CreateAsync_AddsMultipleDocumentUsersToDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
         
         var createDto1 = new CreateDocumentUserDto
         {
@@ -286,7 +397,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task UpdateAsync_UpdatesDocumentUserInDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var createDto = new CreateDocumentUserDto
         {
@@ -323,7 +434,7 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     public async Task DeleteAsync_RemovesDocumentUsersFromDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentUserRepository();
 
         var createDto1 = new CreateDocumentUserDto
         {
@@ -351,8 +462,14 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
         Assert.Null(documentUser2);
     }
     
-    private IDocumentUserRepository GetRepository() =>
+    private IDocumentUserRepository GetDocumentUserRepository() =>
         new DocumentUserRepository(Options.Create(new PostgresOptions
+        {
+            ConnectionString = _fixture.ConnectionString
+        }));
+
+    private IDocumentRepository GetDocumentRepository() =>
+        new DocumentRepository(Options.Create(new PostgresOptions
         {
             ConnectionString = _fixture.ConnectionString
         }));

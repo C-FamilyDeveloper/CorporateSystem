@@ -118,7 +118,6 @@ public class DocumentRepositoryTests
         
         var updateDocumentDto = new UpdateDocumentDto
         {
-            OwnerId = ownerId,
             Title = updatedTitle,
             Content = updatedContent
         };
