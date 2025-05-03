@@ -20,11 +20,12 @@ builder.WebHost.ConfigureKestrel(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ClientCors", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:3000")
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
@@ -37,9 +38,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("ClientCors");
 
 app.UseMiddleware<AuthenticationMiddleware>();
-
+app.UseWebSockets();
 await app.UseOcelot();
 app.Run();

@@ -25,6 +25,19 @@
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
     },
     {
+      "DownstreamPathTemplate": "/document-hub/negotiate",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "corporate-system-shared-docs",
+          "Port": 8093
+        }
+      ],
+      "UpstreamPathTemplate": "/document-hub/negotiate",
+      "UpstreamHttpMethod": [ "POST" ],
+      "AddHeadersToRequest": true
+    },
+    {
       "DownstreamPathTemplate": "/document-hub",
       "DownstreamScheme": "ws",
       "DownstreamHostAndPorts": [
@@ -34,7 +47,9 @@
         }
       ],
       "UpstreamPathTemplate": "/document-hub",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [ "GET" ],
+      "AddHeadersToRequest": true,
+      "ReRouteIsCaseSensitive": false
     }
   ],
   "GlobalConfiguration": {
