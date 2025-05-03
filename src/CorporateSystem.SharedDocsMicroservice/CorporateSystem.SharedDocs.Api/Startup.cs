@@ -22,9 +22,26 @@ public class Startup
     {
         services.AddOpenApi();
         services.AddControllers();
-        services.AddSignalR();
+        services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true;
+            options.KeepAliveInterval = TimeSpan.FromSeconds(10); 
+            options.HandshakeTimeout = TimeSpan.FromSeconds(5);
+        });
         services.AddSharedDocsInfrastructure();
         services.AddSharedDocsServices();
+        services.AddHttpContextAccessor();
+        
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowApiGateway", builder =>
+            {
+                builder.WithOrigins("http://localhost:5000")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
         
         services.Configure<AuthMicroserviceOptions>(Configuration.GetSection("AuthMicroserviceOptions"));
         services.Configure<PostgresOptions>(Configuration.GetSection("PostgresOptions"));
@@ -41,6 +58,8 @@ public class Startup
         
         app.UseRouting();
 
+        app.UseCors("AllowApiGateway");
+        app.UseWebSockets();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapHub<DocumentHub>("/document-hub");

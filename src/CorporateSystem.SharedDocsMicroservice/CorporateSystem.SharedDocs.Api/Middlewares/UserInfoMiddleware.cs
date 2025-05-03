@@ -16,6 +16,8 @@ public class UserInfoMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        _logger.LogInformation($"{nameof(InvokeAsync)}: connectionId={context.Connection.Id}");
+        _logger.LogInformation($"{nameof(InvokeAsync)}: route={context.Request.Path}");
         if (context.Request.Headers.TryGetValue("X-User-Info", out var userInfoHeader))
         {
             try
@@ -23,7 +25,8 @@ public class UserInfoMiddleware
                 var userInfo = JsonSerializer.Deserialize<UserInfo>(userInfoHeader);
                 if (userInfo != null)
                 {
-                    context.Items["UserInfo"] = userInfo;
+                    _logger.LogInformation($"UserInfo={userInfoHeader} added in context.Items");
+                    context.Items["X-User-Info"] = userInfo;
                 }
             }
             catch (JsonException ex)
@@ -31,7 +34,11 @@ public class UserInfoMiddleware
                 _logger.LogError($"{nameof(InvokeAsync)}: Failed to deserialize UserInfo: {ex.Message}");
             }
         }
-
+        else
+        {
+            _logger.LogInformation($"{nameof(InvokeAsync)}: Headers dont have X-User-Info");
+        }
+        
         await _next(context);
     }
 }

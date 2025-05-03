@@ -93,6 +93,48 @@ public class ApiController(
         }
     }
 
+    [HttpGet("get-documents-that-user-has-been-invited")]
+    public async Task<IActionResult> GetDocumentsThatUserHasBeenInvited()
+    {
+        logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: connectionId={HttpContext.Connection.Id}");
+        if (!HttpContext.Request.Headers.TryGetValue("X-User-Info", out var value))
+        {
+            logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: X-User-Info отсутствует");
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+        
+        try
+        {
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(value);
+
+            if (userInfo == null)
+            {
+                logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: userInfo=null");
+                return BadRequest("Что-то пошло не так");
+            }
+            
+            var userId = userInfo.Id;
+            var documents = await documentService.GetDocumentsThatCurrentUserWasInvitedAsync(userId);
+
+            var documentsArray = documents.ToArray();
+
+            var result = documentsArray
+                .Select(document => new GetDocumentsResponse
+                {
+                    Id = document.Id,
+                    Title = document.Title
+                })
+                .ToArray();
+
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            logger.LogError($"{nameof(GetDocumentsThatUserHasBeenInvited)}: {e.Message}");
+            return BadRequest("Что-то пошло не так");
+        }
+    }
+    
     [HttpPost("create-document")]
     public async Task<IActionResult> CreateDocument([FromBody] CreateDocumentRequest request)
     {

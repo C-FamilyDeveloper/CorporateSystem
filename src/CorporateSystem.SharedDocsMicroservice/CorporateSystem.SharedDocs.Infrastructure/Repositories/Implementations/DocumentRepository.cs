@@ -18,12 +18,12 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
 
     public async Task<Document?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
-        var sqlQuery = @$" select id
-                 , owner_id
-                 , title
-                 , content
-                 , modified_at
-                 , created_at 
+        var sqlQuery = @$" select id as Id
+                 , owner_id as OwnerId
+                 , title as Title
+                 , content as Content
+                 , modified_at as ModifiedAt
+                 , created_at as CreatedAt
               from {TableName}
              where id = @Id";
         var command = new CommandDefinition(
@@ -157,8 +157,7 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
     {
         var sqlQuery = @$"
             update {TableName}
-               set owner_id = @OwnerId
-                 , title = @Title
+               set title = @Title
                  , content = @Content
                  , modified_at = @ModifiedAt
              where id = @Id";
@@ -168,7 +167,6 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
             new
             {
                 Id = id,
-                OwnerId = updatedDocumentDto.OwnerId,
                 Title = updatedDocumentDto.Title,
                 Content = updatedDocumentDto.Content,
                 ModifiedAt = DateTimeOffset.UtcNow
