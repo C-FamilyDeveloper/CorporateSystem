@@ -50,38 +50,8 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
                  , document_id as DocumentId
                  , user_id as UserId 
               from {TableName}";
-        var @params = new DynamicParameters();
-        
-        var conditions = new List<string>();
-        if (filter is not null)
-        {
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("id = ANY(@Ids)");
-                @params.Add("Ids", filter.Ids);
-            }
 
-            if (filter.AccessLevels.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("access_level = ANY(@AccessLevels)");
-                @params.Add("AccessLevels", filter
-                    .AccessLevels!
-                    .Select(accessLevel => (int)accessLevel)
-                    .ToArray());
-            }
-
-            if (filter.DocumentIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("document_id = ANY(@DocumentIds)");
-                @params.Add("DocumentIds", filter.DocumentIds);
-            }
-
-            if (filter.UserIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("user_id = ANY(@UserIds)");
-                @params.Add("UserIds", filter.UserIds);
-            }
-        }
+        var @params = GetDynamicParametersForFilter(filter, out var conditions);
 
         if (conditions.Any())
         {
@@ -206,15 +176,20 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
         transaction.Complete();
     }
 
-    public async Task DeleteAsync(int[] ids, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(DocumentUserFilter? filter = null, CancellationToken cancellationToken = default)
     {
-        var sqlQuery = $"delete from {TableName} where id = ANY(@Ids)";
+        var sqlQuery = $"delete from {TableName}";
+
+        var @params = GetDynamicParametersForFilter(filter, out var conditions);
+        
+        if (conditions.Any())
+        {
+            sqlQuery += $" where {string.Join(" and ", conditions)} ";
+        }
+        
         var command = new CommandDefinition(
             sqlQuery,
-            new
-            {
-                Ids = ids
-            }, 
+            @params,
             commandTimeout: DefaultTimeoutInSeconds, 
             cancellationToken: cancellationToken);
         
@@ -225,4 +200,42 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
         
         transaction.Complete();
     }
+
+    private DynamicParameters GetDynamicParametersForFilter(DocumentUserFilter? filter, out List<string> conditions)
+    {
+        var @params = new DynamicParameters();
+        
+        conditions = new List<string>();
+        if (filter is not null)
+        {
+            if (filter.Ids.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("id = ANY(@Ids)");
+                @params.Add("Ids", filter.Ids);
+            }
+
+            if (filter.AccessLevels.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("access_level = ANY(@AccessLevels)");
+                @params.Add("AccessLevels", filter
+                    .AccessLevels!
+                    .Select(accessLevel => (int)accessLevel)
+                    .ToArray());
+            }
+
+            if (filter.DocumentIds.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("document_id = ANY(@DocumentIds)");
+                @params.Add("DocumentIds", filter.DocumentIds);
+            }
+
+            if (filter.UserIds.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("user_id = ANY(@UserIds)");
+                @params.Add("UserIds", filter.UserIds);
+            }
+        }
+
+        return @params;
+    } 
 }

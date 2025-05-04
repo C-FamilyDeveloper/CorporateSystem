@@ -56,48 +56,7 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
                  , modified_at as ModifiedAt
                  , created_at as CreatedAt
               from {TableName}";
-        var @params = new DynamicParameters();
-
-        var conditions = new List<string>();
-        
-        if (filter is not null)
-        {
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("id = ANY(@Ids)");
-                @params.Add("Ids", filter.Ids);
-            }
-
-            if (filter.ModifiedAt.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("modified_at = ANY(@ModifiedAt)");
-                @params.Add("ModifiedAt", filter.ModifiedAt);
-            }
-
-            if (filter.Contents.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("content = ANY(@Contents)");
-                @params.Add("Contents", filter.Contents);
-            }
-
-            if (filter.Titles.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("title = ANY(@Titles)");
-                @params.Add("Titles", filter.Titles);
-            }
-
-            if (filter.OwnerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("owner_id = ANY(@OwnerIds)");
-                @params.Add("OwnerIds", filter.OwnerIds);
-            }
-
-            if (filter.CreatedAt.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("created_at = ANY(@CreatedAt)");
-                @params.Add("CreatedAt", filter.CreatedAt);
-            }
-        }
+        var @params = GetDynamicParametersForFilter(filter, out var conditions);
 
         if (conditions.Any())
         {
@@ -179,15 +138,20 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
         transaction.Complete();
     }
 
-    public async Task DeleteAsync(int[] ids, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(DocumentFilter? filter = null, CancellationToken cancellationToken = default)
     {
-        var sqlQuery = $"delete from {TableName} where id = ANY(@Ids)";
+        var sqlQuery = $"delete from {TableName}";
+
+        var @params = GetDynamicParametersForFilter(filter, out var conditions);
+        
+        if (conditions.Any())
+        {
+            sqlQuery += $" where {string.Join(" and ", conditions)} ";
+        }
+        
         var command = new CommandDefinition(
             sqlQuery,
-            new
-            {
-                Ids = ids
-            },
+            @params,
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
         
@@ -195,6 +159,54 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
         await connection.ExecuteAsync(command);
         transaction.Complete();
+    }
+
+    private DynamicParameters GetDynamicParametersForFilter(DocumentFilter? filter, out List<string> conditions)
+    {
+        var @params = new DynamicParameters();
+
+        conditions = new List<string>();
+        
+        if (filter is not null)
+        {
+            if (filter.Ids.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("id = ANY(@Ids)");
+                @params.Add("Ids", filter.Ids);
+            }
+
+            if (filter.ModifiedAt.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("modified_at = ANY(@ModifiedAt)");
+                @params.Add("ModifiedAt", filter.ModifiedAt);
+            }
+
+            if (filter.Contents.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("content = ANY(@Contents)");
+                @params.Add("Contents", filter.Contents);
+            }
+
+            if (filter.Titles.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("title = ANY(@Titles)");
+                @params.Add("Titles", filter.Titles);
+            }
+
+            if (filter.OwnerIds.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("owner_id = ANY(@OwnerIds)");
+                @params.Add("OwnerIds", filter.OwnerIds);
+            }
+
+            if (filter.CreatedAt.IsNotNullAndNotEmpty())
+            {
+                conditions.Add("created_at = ANY(@CreatedAt)");
+                @params.Add("CreatedAt", filter.CreatedAt);
+            }
+        }
+
+        return @params;
     }
 }
 
