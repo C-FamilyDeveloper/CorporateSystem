@@ -7,3 +7,4 @@ public record struct AddUserToDocumentDto(int DocumentId, DocumentUserInfo[] Use
 public record struct UpdateDocumentContentDto(int DocumentId, int UserId, string NewContent);
 public record struct DocumentUserInfo(int UserId, AccessLevel AccessLevel);
 public record struct GetDocumentUsersDto(int DocumentId, int[] UserIds);
+public record struct DeleteUserFromDocumentDto(int DocumentId, int UserId);

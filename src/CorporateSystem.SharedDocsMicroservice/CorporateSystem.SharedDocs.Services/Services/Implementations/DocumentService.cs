@@ -168,9 +168,23 @@ internal class DocumentService(
             cancellationToken);
     }
 
+    public Task DeleteUsersFromCurrentDocumentAsync(
+        DeleteUserFromDocumentDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        return documentUserRepository.DeleteAsync(new DocumentUserFilter
+        {
+            DocumentIds = [dto.DocumentId],
+            UserIds = [dto.UserId]
+        }, cancellationToken);
+    }
+
     public Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default)
     {
-        return documentRepository.DeleteAsync(ids, cancellationToken);
+        return documentRepository.DeleteAsync(new DocumentFilter
+        {
+            Ids = ids
+        }, cancellationToken);
     }
 
     private async Task<Document> GetDocumentOrThrowExceptionAsync(

@@ -15,5 +15,6 @@ public interface IDocumentService
     Task<IEnumerable<Document>> GetCurrentUserDocuments(int userId, CancellationToken cancellationToken = default);
     Task<IEnumerable<DocumentInfo>> GetDocumentsThatCurrentUserWasInvitedAsync(int userId, CancellationToken cancellationToken = default);
     Task UpdateDocumentContentAsync(UpdateDocumentContentDto dto, CancellationToken cancellationToken = default);
+    Task DeleteUsersFromCurrentDocumentAsync(DeleteUserFromDocumentDto dto, CancellationToken cancellationToken = default);
     Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default);
 }
