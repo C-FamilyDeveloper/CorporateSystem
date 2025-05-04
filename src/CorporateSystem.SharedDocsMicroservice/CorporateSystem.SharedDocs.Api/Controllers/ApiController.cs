@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using CorporateSystem.SharedDocs.Api.Requests;
 using CorporateSystem.SharedDocs.Domain.Enums;
+using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -93,9 +95,52 @@ public class ApiController(
         }
     }
 
+    [HttpGet("get-documents-that-user-has-been-invited")]
+    public async Task<IActionResult> GetDocumentsThatUserHasBeenInvited()
+    {
+        logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: connectionId={HttpContext.Connection.Id}");
+        if (!HttpContext.Request.Headers.TryGetValue("X-User-Info", out var value))
+        {
+            logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: X-User-Info отсутствует");
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+        
+        try
+        {
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(value);
+
+            if (userInfo == null)
+            {
+                logger.LogInformation($"{nameof(GetDocumentsThatUserHasBeenInvited)}: userInfo=null");
+                return BadRequest("Что-то пошло не так");
+            }
+            
+            var userId = userInfo.Id;
+            var documents = await documentService.GetDocumentsThatCurrentUserWasInvitedAsync(userId);
+
+            var documentsArray = documents.ToArray();
+
+            var result = documentsArray
+                .Select(document => new GetDocumentsResponse
+                {
+                    Id = document.Id,
+                    Title = document.Title
+                })
+                .ToArray();
+
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            logger.LogError($"{nameof(GetDocumentsThatUserHasBeenInvited)}: {e.Message}");
+            return BadRequest("Что-то пошло не так");
+        }
+    }
+    
     [HttpPost("create-document")]
     public async Task<IActionResult> CreateDocument([FromBody] CreateDocumentRequest request)
     {
+        logger.LogInformation($"{nameof(CreateDocument)}: connectionId={HttpContext.Connection.Id}");
         if (!HttpContext.Request.Headers.TryGetValue("X-User-Info", out var userInfoValue))
         {
             logger.LogInformation($"{nameof(CreateDocument)}: X-User-Info отсутствует");
@@ -134,6 +179,55 @@ public class ApiController(
         {
             logger.LogError($"{nameof(CreateDocument)}: {e.Message}");
             return BadRequest("Что-то пошло не так");
+        }
+    }
+
+    [HttpDelete("delete-user-from-document/{documentId}")]
+    public async Task<IActionResult> DeleteUserFromDocument([FromRoute] int documentId, [FromQuery] int userId)
+    {
+        logger.LogInformation($"{nameof(DeleteUserFromDocument)}: connectionId={HttpContext.Connection.Id}");
+        if (!HttpContext.Request.Headers.TryGetValue("X-User-Info", out var userInfoValue))
+        {
+            logger.LogInformation($"{nameof(CreateDocument)}: X-User-Info отсутствует");
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+        
+        try
+        {
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(userInfoValue);
+
+            if (userInfo == null)
+            {
+                logger.LogInformation($"{nameof(CreateDocument)}: userInfo=null");
+                return BadRequest("Что-то пошло не так");
+            }
+            
+            var currentDocument = await documentService.GetDocumentAsync(documentId);
+
+            if (currentDocument.OwnerId != userInfo.Id)
+            {
+                logger.LogInformation(
+                    $"{nameof(DeleteUserFromDocument)}: Текущий пользователь пытается удалить пользователя с id={userId}, не являясь владельцем документа с id={documentId}");
+
+                throw new ExceptionWithStatusCode(
+                    "У вас нет прав на выполнение текущей операции",
+                    HttpStatusCode.Forbidden);
+            }
+
+            await documentService.DeleteUsersFromCurrentDocumentAsync(
+                new DeleteUserFromDocumentDto(documentId, userId));
+
+            return Ok();
+        }
+        catch (ExceptionWithStatusCode e)
+        {
+            logger.LogError($"{nameof(DeleteUserFromDocument)}: {e.Message} with status code={e.StatusCode}");
+            return StatusCode((int)e.StatusCode, e.Message);
+        }
+        catch (Exception e)
+        {
+            logger.LogError($"{nameof(DeleteUserFromDocument)}: {e.Message}");
+            return BadRequest(e.Message);
         }
     }
 }

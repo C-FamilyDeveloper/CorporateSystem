@@ -7,6 +7,7 @@ using CorporateSystem.SharedDocs.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Services.Implementations;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
+using CorporateSystem.SharedDocs.Tests.Builders;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -53,6 +54,13 @@ public class DocumentServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([1]);
 
+        _mockDocumentUserRepository
+            .Setup(repo =>
+                repo.CreateAsync(
+                    It.IsAny<CreateDocumentUserDto[]>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1]);
+
         // Act
         var result = await _documentService.CreateDocumentAsync(dto);
 
@@ -66,6 +74,11 @@ public class DocumentServiceTests
                 dtos[0].Title == dto.Title &&
                 dtos[0].Content == dto.Content),
             It.IsAny<CancellationToken>()), Times.Once);
+        
+        _mockDocumentUserRepository.Verify(repo =>
+            repo.CreateAsync(
+                It.IsAny<CreateDocumentUserDto[]>(),
+                It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
@@ -84,14 +97,10 @@ public class DocumentServiceTests
 
         _mockDocumentRepository
             .Setup(repo => repo.GetAsync(dto.DocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Document
-            {
-                Id = dto.DocumentId,
-                Title = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Content = string.Empty,
-                ModifiedAt = null
-            });
+            .ReturnsAsync(
+                new DocumentBuilder()
+                    .WithId(dto.DocumentId)
+                    .Build());
 
         _mockDocumentUserRepository
             .Setup(repo => repo.GetAsync(
@@ -126,14 +135,10 @@ public class DocumentServiceTests
 
         _mockDocumentRepository
             .Setup(repo => repo.GetAsync(dto.DocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Document
-            {
-                Id = dto.DocumentId,
-                Title = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Content = string.Empty,
-                ModifiedAt = null
-            });
+            .ReturnsAsync(
+                new DocumentBuilder()
+                    .WithId(dto.DocumentId)
+                    .Build());
 
         _mockDocumentUserRepository
             .Setup(repo => repo.GetAsync(
@@ -164,14 +169,9 @@ public class DocumentServiceTests
 
         _mockDocumentRepository
             .Setup(repo => repo.GetAsync(documentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Document
-            {
-                Id = documentId,
-                Title = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Content = string.Empty,
-                ModifiedAt = null
-            });
+            .ReturnsAsync(new DocumentBuilder()
+                .WithId(documentId)
+                .Build());
 
         _mockDocumentUserRepository
             .Setup(repo => repo.GetAsync(
@@ -208,14 +208,9 @@ public class DocumentServiceTests
 
         _mockDocumentRepository
             .Setup(repo => repo.GetAsync(dto.DocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Document
-            {
-                Id = dto.DocumentId,
-                Title = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Content = string.Empty,
-                ModifiedAt = null
-            });
+            .ReturnsAsync(new DocumentBuilder()
+                .WithId(dto.DocumentId)
+                .Build());
 
         _mockDocumentUserRepository
             .Setup(repo => repo.GetAsync(
@@ -254,14 +249,9 @@ public class DocumentServiceTests
 
         _mockDocumentRepository
             .Setup(repo => repo.GetAsync(dto.DocumentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Document
-            {
-                Id = dto.DocumentId,
-                Title = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Content = string.Empty,
-                ModifiedAt = null
-            });
+            .ReturnsAsync(new DocumentBuilder()
+                .WithId(dto.DocumentId)
+                .Build());
 
         _mockDocumentUserRepository
             .Setup(repo => repo.GetAsync(
@@ -349,7 +339,23 @@ public class DocumentServiceTests
 
         // Assert
         _mockDocumentRepository.Verify(repo => repo.DeleteAsync(
-            It.Is<int[]>(ids => ids.SequenceEqual(documentIds)),
+            It.Is<DocumentFilter?>(dto => dto.Ids.SequenceEqual(documentIds)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteUsersFromCurrentDocumentAsync_DeletesUserFromDocument()
+    {
+        // Arrange
+
+        var dto = new DeleteUserFromDocumentDto(1, 2);
+
+        // Act
+        await _documentService.DeleteUsersFromCurrentDocumentAsync(dto);
+
+        // Assert
+        _mockDocumentUserRepository.Verify(repo => repo.DeleteAsync(
+            It.IsAny<DocumentUserFilter?>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
     
@@ -360,22 +366,12 @@ public class DocumentServiceTests
         var userId = 1;
         var expectedDocuments = new[]
         {
-            new Document 
-            { 
-                Id = 1,
-                OwnerId = userId,
-                Title = "Doc1",
-                CreatedAt = DateTimeOffset.UtcNow,
-                ModifiedAt = null
-            },
-            new Document
-            {
-                Id = 2,
-                OwnerId = userId,
-                Title = "Doc2",
-                CreatedAt = DateTimeOffset.UtcNow,
-                ModifiedAt = null
-            }
+            new DocumentBuilder()
+                .WithOwnerId(userId)
+                .Build(),
+            new DocumentBuilder()
+                .WithOwnerId(userId)
+                .Build()
         };
         
         _mockDocumentRepository
@@ -389,7 +385,7 @@ public class DocumentServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count());
+        Assert.Equal(2, result.Length);
         Assert.All(result, doc => Assert.Equal(userId, doc.OwnerId));
     }
 
@@ -410,5 +406,68 @@ public class DocumentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetDocumentsThatCurrentUserWasInvitedAsync_ReturnsDocumentsForCurrentUser()
+    {
+        // Arrange
+        var userId = 1;
+        
+        _mockDocumentUserRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.IsAny<DocumentInfoFilter>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new DocumentInfo { Id = 1, Title = "SomeTitle" }]);
+        
+        // Act
+        var result = await _documentService.GetDocumentsThatCurrentUserWasInvitedAsync(userId);
+        
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task GetDocumentAsync_ThrowException_WhenDocumentIsNull()
+    {
+        // Arrange
+        var documentId = 1;
+
+        _mockDocumentRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.Is<int>(value => value == documentId), 
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => null);
+        
+        // Act
+        var result = () => _documentService.GetDocumentAsync(documentId);
+
+        // Assert
+        await result.Should().ThrowAsync<ExceptionWithStatusCode>().WithMessage("Документ не был найден");
+    }
+    
+    [Fact]
+    public async Task GetDocumentAsync_ReturnsDocument()
+    {
+        // Arrange
+        var documentId = 1;
+
+        _mockDocumentRepository
+            .Setup(repo =>
+                repo.GetAsync(
+                    It.Is<int>(value => value == documentId), 
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DocumentBuilder()
+                .WithId(documentId)
+                .Build());
+        
+        // Act
+        var result = await _documentService.GetDocumentAsync(documentId);
+
+        // Assert
+        result.Should().NotBeNull();
     }
 }

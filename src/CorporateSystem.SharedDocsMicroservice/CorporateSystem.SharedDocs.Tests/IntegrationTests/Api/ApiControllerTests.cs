@@ -5,7 +5,10 @@ using CorporateSystem.SharedDocs.Api.Requests;
 using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Domain.Enums;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Tests.Builders;
+using CorporateSystem.SharedDocs.Tests.Helpers;
 using FluentAssertions;
+using Microsoft.AspNetCore.WebUtilities;
 using Moq;
 
 namespace CorporateSystem.SharedDocs.Tests.IntegrationTests.Api;
@@ -66,9 +69,11 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         // Arrange
         var httpClient = factory.CreateClient();
 
+        var documentId = 1;
+        
         var request = new AddUserToDocumentRequest
         {
-            DocumentId = 1,
+            DocumentId = documentId,
             DocumentUserInfos =
             [
                 new DocumentUserInfoDto { UserEmail = "user1@example.com", AccessLevel = AccessLevel.Reader }
@@ -88,7 +93,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
                 new DocumentUser
                 {
                     UserId = 1,
-                    DocumentId = 1,
+                    DocumentId = documentId,
                     AccessLevel = AccessLevel.Reader
                 }
             ]);
@@ -97,7 +102,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         var response = await httpClient.PostAsJsonAsync("/api/add-user-to-document", request);
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Contain("уже добавлен в текущий документ");
@@ -115,23 +120,18 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         // Arrange
         var httpClient = factory.CreateClient();
 
+        var title1 = StringHelper.GetUniqueString();
+        var title2 = StringHelper.GetUniqueString();
+        
         var userInfo = new UserInfo { Id = 1, Role = "Writer" };
         var documents = new[]
         {
-            new Document
-            {
-                Id = 1,
-                Title = "Doc1",
-                ModifiedAt = null,
-                CreatedAt = DateTimeOffset.UtcNow
-            },
-            new Document
-            {
-                Id = 2,
-                Title = "Doc2",
-                CreatedAt = DateTimeOffset.UtcNow,
-                ModifiedAt = null
-            }
+            new DocumentBuilder()
+                .WithTitle(title1)
+                .Build(),
+            new DocumentBuilder()
+                .WithTitle(title2)
+                .Build()
         };
         
         factory.MockDocumentService
@@ -152,8 +152,8 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         var responseBody = await response.Content.ReadFromJsonAsync<GetDocumentsResponse[]>();
         responseBody.Should().NotBeNull();
         responseBody.Should().HaveCount(2);
-        responseBody[0].Title.Should().Be("Doc1");
-        responseBody[1].Title.Should().Be("Doc2");
+        responseBody[0].Title.Should().Be(title1);
+        responseBody[1].Title.Should().Be(title2);
         
         factory.MockDocumentService.Verify(
             service => service.GetCurrentUserDocuments(
@@ -226,6 +226,134 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
             Times.Once);
     }
 
+    [Fact]
+    public async Task DeleteUserFromDocument_ReturnsOk_WhenUserIsOwner()
+    {
+        var httpClient = factory.CreateClient();
+
+        var userInfo = new UserInfo { Id = 1, Role = "Writer" };
+        var documentId = 1;
+        var userId = 2;
+        
+        factory.MockDocumentService
+            .Setup(service => service.GetDocumentAsync(
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+                new DocumentBuilder()
+                    .WithId(documentId)
+                    .WithOwnerId(userInfo.Id)
+                    .Build());
+        
+        factory.MockDocumentService
+            .Setup(service => service.DeleteUsersFromCurrentDocumentAsync(
+                It.Is<DeleteUserFromDocumentDto>(dto =>
+                    dto.DocumentId == documentId && dto.UserId == userId),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+        httpRequest.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
+
+        // Act
+        var response = await httpClient.SendAsync(httpRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        factory.MockDocumentService.Verify(
+            service => service.GetDocumentAsync(
+                documentId,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        factory.MockDocumentService.Verify(
+            service => service.DeleteUsersFromCurrentDocumentAsync(
+                It.Is<DeleteUserFromDocumentDto>(dto =>
+                    dto.DocumentId == documentId && dto.UserId == userId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public async Task DeleteUserFromDocument_ReturnsForbidden_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var httpClient = factory.CreateClient();
+
+        var userInfo = new UserInfo { Id = 2, Role = "Writer" };
+        var documentId = 1;
+        var userId = 3;
+        
+        factory.MockDocumentService
+            .Setup(service => service.GetDocumentAsync(documentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+                new DocumentBuilder()
+                    .WithId(documentId)
+                    .WithOwnerId(userId)
+                    .Build());
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+        httpRequest.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
+
+        // Act
+        var response = await httpClient.SendAsync(httpRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        responseBody.Should().Contain("У вас нет прав на выполнение текущей операции");
+
+        factory.MockDocumentService.Verify(
+            service => service.GetDocumentAsync(documentId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        factory.MockDocumentService.Verify(
+            service => service.DeleteUsersFromCurrentDocumentAsync(
+                It.IsAny<DeleteUserFromDocumentDto>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+    
+    [Fact]
+    public async Task DeleteUserFromDocument_ReturnsBadRequest_WhenUserInfoIsMissing()
+    {
+        // Arrange
+        var httpClient = factory.CreateClient();
+
+        var documentId = 1;
+        var userId = 2;
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+
+        factory.MockDocumentService
+            .Setup(service =>
+                service.GetDocumentAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DocumentBuilder().Build());
+        
+        // Act
+        var response = await httpClient.SendAsync(httpRequest);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        responseBody.Should().Contain("Отсутствует информация о пользователе");
+
+        factory.MockDocumentService.Verify(
+            service => service.GetDocumentAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        factory.MockDocumentService.Verify(
+            service => service.DeleteUsersFromCurrentDocumentAsync(
+                It.IsAny<DeleteUserFromDocumentDto>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+    
     [Fact]
     public async Task CreateDocument_ReturnsBadRequest_WhenUserInfoIsMissing()
     {

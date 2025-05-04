@@ -4,6 +4,7 @@ using CorporateSystem.SharedDocs.Api.Requests;
 using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Domain.Enums;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -23,6 +24,14 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
     {
         // Arrange
         var documentId = 1;
+        var document = new Document
+        {
+            Title = "SomeTitle",
+            Content = string.Empty,
+            CreatedAt = DateTimeOffset.Now,
+            Id = documentId,
+            ModifiedAt = null
+        };
         var user1 = new UserInfo { Id = 1, Role = "Writer" };
         var user2 = new UserInfo { Id = 2, Role = "Writer" };
         
@@ -53,15 +62,31 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
                     AccessLevel = AccessLevel.Writer
                 }
             ]);
+
+        factory.MockDocumentService
+            .Setup(service =>
+                service.GetDocumentAsync(
+                    It.Is<int>(id => id == documentId),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(document);
+
+        factory.MockDocumentService
+            .Setup(service =>
+                service.UpdateDocumentContentAsync(
+                    It.Is<UpdateDocumentContentDto>(dto => dto.DocumentId == documentId), 
+                    It.IsAny<CancellationToken>()))
+            .Returns((UpdateDocumentContentDto dto, CancellationToken _) =>
+            {
+                document.Content = dto.NewContent;
+                return Task.CompletedTask;
+            });
         
         var connection1 = CreateHubConnection(user1);
         var connection2 = CreateHubConnection(user2);
         
-        var receivedContentByUser2 = string.Empty;
-        
         connection2.On<string>("ReceiveDocumentUpdate", newContent =>
         {
-            receivedContentByUser2 = newContent;
+            document.Content = newContent;
         });
 
         // Act
@@ -70,23 +95,18 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
         
         await connection1.InvokeAsync("JoinDocumentGroup", new JoinDocumentGroupRequest
         {
-            DocumentId = documentId,
-            UserId = user1.Id,
-            AccessLevel = AccessLevel.Writer
+            DocumentId = documentId
         });
 
         await connection2.InvokeAsync("JoinDocumentGroup", new JoinDocumentGroupRequest
         {
-            DocumentId = documentId,
-            UserId = user2.Id,
-            AccessLevel = AccessLevel.Writer
+            DocumentId = documentId
         });
         
         var newContent = "Updated content by User1";
         await connection1.InvokeAsync("SendDocumentUpdate", new SendDocumentUpdateRequest
         {
             DocumentId = documentId,
-            UserId = user1.Id,
             NewContent = newContent
         });
 
@@ -94,7 +114,7 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
         await Task.Delay(500);
 
         // Assert
-        receivedContentByUser2.Should().Be(newContent);
+        document.Content.Should().Be(newContent);
         
         await connection1.StopAsync();
         await connection2.StopAsync();

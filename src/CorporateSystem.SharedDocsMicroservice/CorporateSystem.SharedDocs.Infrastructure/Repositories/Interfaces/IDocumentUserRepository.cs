@@ -11,7 +11,8 @@ public interface IDocumentUserRepository
         DocumentUserFilter? filter = null, 
         CancellationToken cancellationToken = default);
 
+    Task<IEnumerable<DocumentInfo>> GetAsync(DocumentInfoFilter? filter = null, CancellationToken cancellationToken = default);
     Task<int[]> CreateAsync(CreateDocumentUserDto[] dtos, CancellationToken cancellationToken = default);
     Task UpdateAsync(int id, UpdateDocumentUserDto dto, CancellationToken cancellationToken = default);
-    Task DeleteAsync(int[] ids, CancellationToken cancellationToken = default);
+    Task DeleteAsync(DocumentUserFilter? filter = null, CancellationToken cancellationToken = default);
 }

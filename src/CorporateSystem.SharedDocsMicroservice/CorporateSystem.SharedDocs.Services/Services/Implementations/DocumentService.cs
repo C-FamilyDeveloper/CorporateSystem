@@ -6,10 +6,8 @@ using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Filters;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.SharedDocs.Services.Dtos;
-using CorporateSystem.SharedDocs.Services.Options;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using CreateDocumentDto = CorporateSystem.SharedDocs.Services.Dtos.CreateDocumentDto;
 
 namespace CorporateSystem.SharedDocs.Services.Services.Implementations;
@@ -20,12 +18,29 @@ internal class DocumentService(
     IDocumentUserRepository documentUserRepository,
     IAuthApiService authApiService) : IDocumentService
 {
+    public async Task<Document> GetDocumentAsync(int documentId, CancellationToken cancellationToken = default)
+    {
+        var document = await documentRepository.GetAsync(documentId, cancellationToken);
+
+        if (document is null)
+        {
+            logger.LogError($"{nameof(GetDocumentAsync)}: document with id={documentId} not found");
+            throw new ExceptionWithStatusCode("Документ не был найден", HttpStatusCode.NotFound);
+        }
+
+        return document;
+    }
+
     public async Task<int> CreateDocumentAsync(CreateDocumentDto dto, CancellationToken cancellationToken = default)
     {
         var ids = await documentRepository.CreateAsync(
             [new Infrastructure.Dtos.CreateDocumentDto(dto.OwnerId, dto.Title, dto.Content)],
             cancellationToken);
 
+        await documentUserRepository.CreateAsync([
+            new CreateDocumentUserDto(ids.Single(), dto.OwnerId, AccessLevel.Writer)
+        ], cancellationToken);
+        
         return ids.Single();
     }
 
@@ -114,6 +129,16 @@ internal class DocumentService(
         }, cancellationToken);
     }
 
+    public Task<IEnumerable<DocumentInfo>> GetDocumentsThatCurrentUserWasInvitedAsync(
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        return documentUserRepository.GetAsync(new DocumentInfoFilter
+        {
+            FollowerIds = [userId]
+        }, cancellationToken);
+    }
+
     public async Task UpdateDocumentContentAsync(
         UpdateDocumentContentDto dto,
         CancellationToken cancellationToken = default)
@@ -125,9 +150,9 @@ internal class DocumentService(
             DocumentIds = [document.Id],
             UserIds = [dto.UserId]
         }, cancellationToken);
-
+        
         var currentUser = documentUsers.Single();
-
+        
         if (currentUser.AccessLevel is not AccessLevel.Writer)
         {
             logger.LogError(
@@ -137,14 +162,29 @@ internal class DocumentService(
                 HttpStatusCode.Forbidden);
         }
 
-        await documentRepository.UpdateAsync(document.Id,
-            new UpdateDocumentDto(document.OwnerId, document.Title, dto.NewContent),
+        await documentRepository.UpdateAsync(
+            document.Id,
+            new UpdateDocumentDto(document.Title, dto.NewContent),
             cancellationToken);
+    }
+
+    public Task DeleteUsersFromCurrentDocumentAsync(
+        DeleteUserFromDocumentDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        return documentUserRepository.DeleteAsync(new DocumentUserFilter
+        {
+            DocumentIds = [dto.DocumentId],
+            UserIds = [dto.UserId]
+        }, cancellationToken);
     }
 
     public Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default)
     {
-        return documentRepository.DeleteAsync(ids, cancellationToken);
+        return documentRepository.DeleteAsync(new DocumentFilter
+        {
+            Ids = ids
+        }, cancellationToken);
     }
 
     private async Task<Document> GetDocumentOrThrowExceptionAsync(
