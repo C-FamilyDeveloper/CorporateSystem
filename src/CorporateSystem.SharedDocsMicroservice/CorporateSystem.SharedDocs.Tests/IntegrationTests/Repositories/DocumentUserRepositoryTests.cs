@@ -431,15 +431,18 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
     }
     
     [Fact]
-    public async Task DeleteAsync_RemovesDocumentUsersFromDatabase()
+    public async Task DeleteAsync_WithIdsFilter_DeletesMatchingDocumentUsers()
     {
         // Arrange
         var repository = GetDocumentUserRepository();
 
+        var documentId = Int.GetUniqueNumber();
+        var userId = Int.GetUniqueNumber();
+
         var createDto1 = new CreateDocumentUserDto
         {
-            DocumentId = Int.GetUniqueNumber(),
-            UserId = Int.GetUniqueNumber(),
+            DocumentId = documentId,
+            UserId = userId,
             AccessLevel = AccessLevel.Reader
         };
         var createDto2 = new CreateDocumentUserDto
@@ -451,15 +454,176 @@ public class DocumentUserRepositoryTests : IClassFixture<PostgresContainer>
 
         var createdIds = await repository.CreateAsync([createDto1, createDto2]);
 
+        var filter = new DocumentUserFilter
+        {
+            Ids = [createdIds[0]]
+        };
+
         // Act
-        await repository.DeleteAsync(createdIds);
+        await repository.DeleteAsync(filter);
 
         // Assert
-        var documentUser1 = await repository.GetAsync(createdIds[0]);
-        Assert.Null(documentUser1);
+        var remainingDocumentUsers = (await repository.GetAsync((DocumentUserFilter)null)).ToArray();
+        Assert.True(remainingDocumentUsers.All(documentUser => documentUser.Id != createdIds[0]));
+        Assert.Contains(remainingDocumentUsers, documentUser => documentUser.Id == createdIds[1]);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithDocumentIdsFilter_DeletesMatchingDocumentUsers()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
 
-        var documentUser2 = await repository.GetAsync(createdIds[1]);
-        Assert.Null(documentUser2);
+        var documentId1 = Int.GetUniqueNumber();
+        var documentId2 = Int.GetUniqueNumber();
+
+        var createDto1 = new CreateDocumentUserDto
+        {
+            DocumentId = documentId1,
+            UserId = Int.GetUniqueNumber(),
+            AccessLevel = AccessLevel.Reader
+        };
+        
+        var createDto2 = new CreateDocumentUserDto
+        {
+            DocumentId = documentId2,
+            UserId = Int.GetUniqueNumber(),
+            AccessLevel = AccessLevel.Writer
+        };
+
+        var ids = await repository.CreateAsync([createDto1, createDto2]);
+
+        var filter = new DocumentUserFilter
+        {
+            DocumentIds = [documentId1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocumentUsers = (await repository.GetAsync((DocumentUserFilter)null)).ToArray();
+        Assert.True(remainingDocumentUsers.All(documentUser => documentUser.DocumentId != documentId1));
+        Assert.Contains(remainingDocumentUsers, documentUser => documentUser.DocumentId == documentId2 && ids[1] == documentUser.Id);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithUserIdsFilter_DeletesMatchingDocumentUsers()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
+
+        var userId1 = Int.GetUniqueNumber();
+        var userId2 = Int.GetUniqueNumber();
+
+        var createDto1 = new CreateDocumentUserDto
+        {
+            DocumentId = Int.GetUniqueNumber(),
+            UserId = userId1,
+            AccessLevel = AccessLevel.Reader
+        };
+        var createDto2 = new CreateDocumentUserDto
+        {
+            DocumentId = Int.GetUniqueNumber(),
+            UserId = userId2,
+            AccessLevel = AccessLevel.Writer
+        };
+
+        await repository.CreateAsync([createDto1, createDto2]);
+
+        var filter = new DocumentUserFilter
+        {
+            UserIds = [userId1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocumentUsers = (await repository.GetAsync((DocumentUserFilter)null)).ToArray();
+        Assert.True(remainingDocumentUsers.All(documentUser => documentUser.UserId != userId1));
+        Assert.Contains(remainingDocumentUsers, documentUser => documentUser.UserId == userId2);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithAccessLevelsFilter_DeletesMatchingDocumentUsers()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
+
+        var documentId = Int.GetUniqueNumber();
+        
+        var createDto1 = new CreateDocumentUserDto
+        {
+            DocumentId = documentId,
+            UserId = Int.GetUniqueNumber(),
+            AccessLevel = AccessLevel.Reader
+        };
+        var createDto2 = new CreateDocumentUserDto
+        {
+            DocumentId = Int.GetUniqueNumber(),
+            UserId = Int.GetUniqueNumber(),
+            AccessLevel = AccessLevel.Writer
+        };
+
+        await repository.CreateAsync([createDto1, createDto2]);
+
+        var filter = new DocumentUserFilter
+        {
+            AccessLevels = [AccessLevel.Reader]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocumentUsers = (await repository.GetAsync((DocumentUserFilter)null)).ToArray();
+        Assert.True(remainingDocumentUsers.All(documentUser => documentUser.DocumentId != documentId));
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithCombinedFilters_DeletesMatchingDocumentUsers()
+    {
+        // Arrange
+        var repository = GetDocumentUserRepository();
+
+        var documentId1 = Int.GetUniqueNumber();
+        var documentId2 = Int.GetUniqueNumber();
+        var userId1 = Int.GetUniqueNumber();
+        var userId2 = Int.GetUniqueNumber();
+
+        var createDto1 = new CreateDocumentUserDto
+        {
+            DocumentId = documentId1,
+            UserId = userId1,
+            AccessLevel = AccessLevel.Reader
+        };
+        var createDto2 = new CreateDocumentUserDto
+        {
+            DocumentId = documentId2,
+            UserId = userId2,
+            AccessLevel = AccessLevel.Writer
+        };
+
+        var ids = await repository.CreateAsync([createDto1, createDto2]);
+
+        var filter = new DocumentUserFilter
+        {
+            DocumentIds = [documentId1],
+            UserIds = [userId1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocumentUsers = (await repository.GetAsync((DocumentUserFilter)null)).ToArray();
+        Assert.True(remainingDocumentUsers.All(documentUser => documentUser.DocumentId != documentId1));
+        Assert.Contains(
+            remainingDocumentUsers, 
+            documentUser => documentUser.DocumentId == documentId2 &&
+                            documentUser.UserId == userId2 &&
+                            documentUser.Id == ids[1]);
     }
     
     private IDocumentUserRepository GetDocumentUserRepository() =>

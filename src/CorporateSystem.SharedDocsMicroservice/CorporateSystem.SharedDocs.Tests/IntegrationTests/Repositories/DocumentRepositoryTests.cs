@@ -26,7 +26,7 @@ public class DocumentRepositoryTests
     public async Task GetAsync_ReturnsDocument_WhenIdExists()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var title = StringHelper.GetUniqueString();
         var content = StringHelper.GetUniqueString();
@@ -54,7 +54,7 @@ public class DocumentRepositoryTests
     public async Task CreateAsync_AddsDocumentsToDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var title1 = StringHelper.GetUniqueString();
         var title2 = StringHelper.GetUniqueString();
@@ -96,7 +96,7 @@ public class DocumentRepositoryTests
     public async Task UpdateAsync_UpdatesDocumentInDatabase()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var ownerId = Int.GetUniqueNumber();
 
@@ -133,33 +133,189 @@ public class DocumentRepositoryTests
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesDocumentsFromDatabase()
+    public async Task DeleteAsync_WithIdsFilter_DeletesMatchingDocuments()
     {
         // Arrange
-        var repository = GetRepository();
-        
-        var createDocumentDto = new CreateDocumentDto
+        var repository = GetDocumentRepository();
+
+        var document1 = new CreateDocumentDto
         {
             OwnerId = Int.GetUniqueNumber(),
             Title = StringHelper.GetUniqueString(),
             Content = StringHelper.GetUniqueString()
         };
-        var createdIds = await repository.CreateAsync([createDocumentDto]);
-        var documentId = createdIds[0];
+        
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = Int.GetUniqueNumber(),
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+
+        var createdDocumentIds = await repository.CreateAsync([document1, document2]);
+
+        var filter = new DocumentFilter
+        {
+            Ids = [createdDocumentIds[0]]
+        };
 
         // Act
-        await repository.DeleteAsync([documentId]);
+        await repository.DeleteAsync(filter);
 
         // Assert
-        var deletedDocument = await repository.GetAsync(documentId);
-        Assert.Null(deletedDocument);
+        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithOwnerIdsFilter_DeletesMatchingDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentRepository();
+
+        var ownerId1 = Int.GetUniqueNumber();
+        var ownerId2 = Int.GetUniqueNumber();
+
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = ownerId1,
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+        
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = ownerId2,
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+
+        var createdDocumentIds = await repository.CreateAsync([document1, document2]);
+
+        var filter = new DocumentFilter
+        {
+            OwnerIds = [ownerId1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithTitlesFilter_DeletesMatchingDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentRepository();
+
+        var title1 = StringHelper.GetUniqueString();
+        
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = Int.GetUniqueNumber(),
+            Title = title1,
+            Content = StringHelper.GetUniqueString()
+        };
+        
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = Int.GetUniqueNumber(),
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+
+        var createdDocumentIds = await repository.CreateAsync([document1, document2]);
+
+        var filter = new DocumentFilter
+        {
+            Titles = [title1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithCombinedFilters_DeletesMatchingDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentRepository();
+
+        var ownerId1 = Int.GetUniqueNumber();
+        var ownerId2 = Int.GetUniqueNumber();
+        var title1 = StringHelper.GetUniqueString();
+
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = ownerId1,
+            Title = title1,
+            Content = StringHelper.GetUniqueString()
+        };
+        
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = ownerId2,
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+
+        var createdDocumentIds = await repository.CreateAsync([document1, document2]);
+
+        var filter = new DocumentFilter
+        {
+            OwnerIds = [ownerId1],
+            Titles = [title1]
+        };
+
+        // Act
+        await repository.DeleteAsync(filter);
+
+        // Assert
+        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
+    }
+    
+    [Fact]
+    public async Task DeleteAsync_WithoutFilters_DeletesAllDocuments()
+    {
+        // Arrange
+        var repository = GetDocumentRepository();
+
+        var document1 = new CreateDocumentDto
+        {
+            OwnerId = Int.GetUniqueNumber(),
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+        var document2 = new CreateDocumentDto
+        {
+            OwnerId = Int.GetUniqueNumber(),
+            Title = StringHelper.GetUniqueString(),
+            Content = StringHelper.GetUniqueString()
+        };
+
+        await repository.CreateAsync([document1, document2]);
+
+        // Act
+        await repository.DeleteAsync();
+
+        // Assert
+        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        Assert.Empty(remainingDocuments);
     }
     
     [Fact]
     public async Task GetAsync_WithIdsFilter_ReturnsFilteredDocuments()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var title1 = StringHelper.GetUniqueString();
         var content1 = StringHelper.GetUniqueString();
@@ -201,7 +357,7 @@ public class DocumentRepositoryTests
     public async Task GetAsync_WithContentsFilter_ReturnsFilteredDocuments()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var title2 = StringHelper.GetUniqueString();
         var content2 = StringHelper.GetUniqueString();
@@ -240,7 +396,7 @@ public class DocumentRepositoryTests
     public async Task GetAsync_WithTitlesFilter_ReturnsFilteredDocuments()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var title2 = StringHelper.GetUniqueString();
         var content2 = StringHelper.GetUniqueString();
@@ -279,7 +435,7 @@ public class DocumentRepositoryTests
     public async Task GetAsync_WithOwnerIdsFilter_ReturnsFilteredDocuments()
     {
         // Arrange
-        var repository = GetRepository();
+        var repository = GetDocumentRepository();
 
         var ownerId1 = Int.GetUniqueNumber();
         var title1 = StringHelper.GetUniqueString();
@@ -314,7 +470,7 @@ public class DocumentRepositoryTests
         Assert.Equal(title1, document.Title);
     }
     
-    private IDocumentRepository GetRepository() => 
+    private IDocumentRepository GetDocumentRepository() => 
         new DocumentRepository(Options.Create(new PostgresOptions
         {
             ConnectionString = _fixture.ConnectionString
