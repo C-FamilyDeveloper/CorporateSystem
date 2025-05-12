@@ -1,10 +1,10 @@
-﻿using System.Net;
-using CorporateSystem.SharedDocs.Api.Requests;
+﻿using CorporateSystem.SharedDocs.Api.Requests;
 using CorporateSystem.SharedDocs.Domain.Enums;
-using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Services.Exceptions;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using UserInfo = CorporateSystem.SharedDocs.Api.Requests.UserInfo;
 
 namespace CorporateSystem.SharedDocs.Api.Hubs;
 
@@ -20,7 +20,7 @@ public class DocumentHub(
         if (httpContext?.Items["X-User-Info"] is not UserInfo userInfo)
         {
             logger.LogError($"{nameof(OnConnectedAsync)}: UserInfo is missing");
-            throw new ExceptionWithStatusCode("Отсутствует информация о пользователе", HttpStatusCode.BadRequest);
+            throw new ArgumentException("Отсутствует информация о пользователе");
         }
         
         Context.Items["X-User-Info"] = userInfo;
@@ -41,7 +41,7 @@ public class DocumentHub(
         if (!existingUser.Any())
         {
             logger.LogError($"{nameof(JoinDocumentGroup)}: User with ID {userInfo.Id} not found in document {request.DocumentId}");
-            throw new ExceptionWithStatusCode("У вас нет доступа к данному файлу", HttpStatusCode.Forbidden);
+            throw new InsufficientPermissionsException("У вас нет доступа к данному файлу");
         }
         
         await Groups.AddToGroupAsync(Context.ConnectionId, request.DocumentId.ToString());
@@ -54,7 +54,7 @@ public class DocumentHub(
         if (request == null)
         {
             logger.LogError($"{nameof(SendDocumentUpdate)}: Request=null");
-            throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest);
+            throw new ArgumentException("Что-то пошло не так");
         }
 
         var userInfo = GetUserInfoOrThrowException();
@@ -68,14 +68,14 @@ public class DocumentHub(
         if (!existingUserArray.Any())
         {
             logger.LogError($"{nameof(SendDocumentUpdate)}: User with ID {userInfo.Id} not found in document {request.DocumentId}");
-            throw new ExceptionWithStatusCode("У вас нет доступа к данному файлу", HttpStatusCode.Forbidden);
+            throw new InsufficientPermissionsException("У вас нет доступа к данному файлу");
         }
 
         var currentUser = existingUserArray.Single();
         if (currentUser.AccessLevel != AccessLevel.Writer)
         {
             logger.LogError($"{nameof(SendDocumentUpdate)}: User with ID {userInfo.Id} does not have Writer access to document {request.DocumentId}");
-            throw new ExceptionWithStatusCode("У вас нет прав на редактирование данного файла", HttpStatusCode.Forbidden);
+            throw new InsufficientPermissionsException("У вас нет прав на редактирование данного файла");
         }
         
         await documentService.UpdateDocumentContentAsync(new UpdateDocumentContentDto
@@ -96,6 +96,6 @@ public class DocumentHub(
             return userInfo;
         
         logger.LogError($"{nameof(GetUserInfoOrThrowException)}: UserInfo is missing");
-        throw new ExceptionWithStatusCode("Отсутствует информация о пользователе", HttpStatusCode.Unauthorized);
+        throw new ArgumentException("Отсутствует информация о пользователе");
     }
 }
