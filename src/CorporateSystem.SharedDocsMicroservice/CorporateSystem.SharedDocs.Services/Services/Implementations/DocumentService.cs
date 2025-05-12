@@ -15,7 +15,8 @@ internal class DocumentService(
     ILogger<DocumentService> logger,
     IDocumentRepository documentRepository,
     IDocumentUserRepository documentUserRepository,
-    IAuthApiService authApiService) : IDocumentService
+    IAuthApiService authApiService,
+    IDocumentCompositeRepository documentCompositeRepository) : IDocumentService
 {
     public async Task<Document> GetDocumentAsync(int documentId, CancellationToken cancellationToken = default)
     {
@@ -35,10 +36,6 @@ internal class DocumentService(
         var ids = await documentRepository.CreateAsync(
             [new Infrastructure.Dtos.CreateDocumentDto(dto.OwnerId, dto.Title, dto.Content)],
             cancellationToken);
-
-        await documentUserRepository.CreateAsync([
-            new CreateDocumentUserDto(ids.Single(), dto.OwnerId, AccessLevel.Writer)
-        ], cancellationToken);
         
         return ids.Single();
     }
@@ -91,11 +88,11 @@ internal class DocumentService(
         int documentId,
         CancellationToken cancellationToken = default)
     {
-        await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
+        var document = await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
 
         var documentUsers = await documentUserRepository.GetAsync(new DocumentUserFilter
         {
-            DocumentIds = [documentId]
+            DocumentIds = [document.Id]
         }, cancellationToken);
 
         var userIds = documentUsers
@@ -116,24 +113,41 @@ internal class DocumentService(
         }, cancellationToken);
     }
 
-    public Task<IEnumerable<Document>> GetCurrentUserDocuments(
+    public Task<IEnumerable<DocumentInfo>> GetCurrentUserDocuments(
         int userId,
         CancellationToken cancellationToken = default)
     {
-        return documentRepository.GetAsync(new DocumentFilter
-        {
-            OwnerIds = [userId]
-        }, cancellationToken);
+        return documentCompositeRepository.GetAsync(userId, cancellationToken);
     }
 
     public Task<IEnumerable<DocumentInfo>> GetDocumentsThatCurrentUserWasInvitedAsync(
         int userId,
         CancellationToken cancellationToken = default)
     {
-        return documentUserRepository.GetAsync(new DocumentInfoFilter
+        return documentCompositeRepository.GetAsync(new DocumentInfoFilter
         {
             FollowerIds = [userId]
         }, cancellationToken);
+    }
+
+    public async Task<IEnumerable<UserInfo>> GetUsersOfCurrentDocument(
+        int documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDocument = await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
+
+        var usersCurrentDocument = await documentUserRepository.GetAsync(new DocumentUserFilter
+        {
+            DocumentIds = [currentDocument.Id]
+        }, cancellationToken);
+
+        var usersIds = usersCurrentDocument
+            .Select(user => user.UserId)
+            .ToArray();
+
+        var userEmails = await authApiService.GetUserEmailsByIdsAsync(usersIds, cancellationToken);
+
+        return userEmails.Select(email => new UserInfo(email));
     }
 
     public async Task UpdateDocumentContentAsync(

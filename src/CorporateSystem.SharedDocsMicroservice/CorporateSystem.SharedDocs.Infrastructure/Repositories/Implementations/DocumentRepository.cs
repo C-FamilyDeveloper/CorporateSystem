@@ -1,5 +1,7 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using CorporateSystem.SharedDocs.Domain.Entities;
+using CorporateSystem.SharedDocs.Domain.Enums;
 using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Infrastructure.Extensions;
 using CorporateSystem.SharedDocs.Infrastructure.Options;
@@ -80,7 +82,7 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
 
     public async Task<int[]> CreateAsync(CreateDocumentDto[] dtos, CancellationToken cancellationToken = default)
     {
-        var sqlQuery = @$"
+        var sqlQueryForDocument = @$"
             insert into {TableName} (owner_id, title, content, created_at)
             select UNNEST(@OwnerIds)
                  , UNNEST(@Titles)
@@ -88,8 +90,13 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
                  , @CreatedAt
          returning id";
         
-        var command = new CommandDefinition(
-            sqlQuery,
+        var sqlQueryForDocumentUsers = @$"
+            insert into document_users (document_id, user_id, access_level)
+            select UNNEST(@DocumentIds), UNNEST(@UserIds), UNNEST(@AccessLevels)
+         returning id";
+        
+        var commandForDocument = new CommandDefinition(
+            sqlQueryForDocument,
             new
             {
                 OwnerIds = dtos.Select(dto => dto.OwnerId).ToArray(),
@@ -103,10 +110,26 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
         using var transaction = CreateTransactionScope();
         await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
 
-        var ids = await connection.QueryAsync<int>(command);
+        var ids = await connection.QueryAsync<int>(commandForDocument);
+
+        var idsArray = ids.ToArray();
+        
+        var commandForDocumentUser = new CommandDefinition(
+            sqlQueryForDocumentUsers,
+            new
+            {
+                DocumentIds = idsArray,
+                UserIds = dtos.Select(dto => dto.OwnerId).ToArray(),
+                AccessLevels = Enumerable
+                    .Repeat((int)AccessLevel.Writer, idsArray.Length)
+                    .ToArray()
+            });
+
+        await connection.QueryAsync<int>(commandForDocumentUser);
+        
         transaction.Complete();
         
-        return ids.ToArray();
+        return idsArray;
     }
 
     public async Task UpdateAsync(

@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
     {
         return services
             .AddScoped<IDocumentUserRepository, DocumentUserRepository>()
-            .AddScoped<IDocumentRepository, DocumentRepository>();
+            .AddScoped<IDocumentRepository, DocumentRepository>()
+            .AddScoped<IDocumentCompositeRepository, DocumentCompositeRepository>();
     }
 }

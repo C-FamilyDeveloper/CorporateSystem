@@ -73,55 +73,6 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
         return result;
     }
 
-    public async Task<IEnumerable<DocumentInfo>> GetAsync(
-        DocumentInfoFilter? filter = null,
-        CancellationToken cancellationToken = default)
-    {
-        var sqlQuery = $@"
-            select d.id as Id
-                 , d.title as Title
-              from documents d
-              join {TableName} du on du.document_id = d.id";
-
-        var @params = new DynamicParameters();
-        var conditions = new List<string>();
-        
-        if (filter is not null)
-        {
-            if (filter.OwnerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("d.owner_id = ANY(@OwnerIds)");
-                @params.Add("OwnerIds", filter.OwnerIds);
-            }
-
-            if (filter.FollowerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("du.user_id = ANY(@FollowersIds)");
-                @params.Add("FollowersIds", filter.FollowerIds);
-            }
-        }
-
-        if (conditions.Any())
-        {
-            sqlQuery += $" where {string.Join(" and ", conditions)} ";
-        }
-        
-        var command = new CommandDefinition(
-            sqlQuery,
-            @params,
-            commandTimeout: DefaultTimeoutInSeconds,
-            cancellationToken: cancellationToken);
-
-        using var transaction = CreateTransactionScope();
-        await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
-
-        var documents = await connection.QueryAsync<DocumentInfo>(command);
-        
-        transaction.Complete();
-
-        return documents;
-    }
-
     public async Task<int[]> CreateAsync(CreateDocumentUserDto[] dtos, CancellationToken cancellationToken = default)
     {
         var sqlQuery = @$"
@@ -152,8 +103,7 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
     {
         var sqlQuery = @$"
             update {TableName}
-               set document_id = @DocumentId
-                 , user_id = @UserId
+               set user_id = @UserId
                  , access_level = @AccessLevel
              where id = @Id";
         
@@ -162,7 +112,6 @@ internal class DocumentUserRepository(IOptions<PostgresOptions> options)
             new
             {
                 Id = id,
-                DocumentId = dto.DocumentId,
                 UserId = dto.UserId,
                 AccessLevel = dto.AccessLevel
             },
