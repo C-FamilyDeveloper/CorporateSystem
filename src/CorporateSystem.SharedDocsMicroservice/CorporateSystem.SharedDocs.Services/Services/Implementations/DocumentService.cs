@@ -84,24 +84,6 @@ internal class DocumentService(
         logger.LogInformation($"{nameof(AddUsersToDocumentAsync)}: Completed");
     }
 
-    public async Task<string[]> GetUserEmailsOfCurrentDocumentAsync(
-        int documentId,
-        CancellationToken cancellationToken = default)
-    {
-        var document = await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
-
-        var documentUsers = await documentUserRepository.GetAsync(new DocumentUserFilter
-        {
-            DocumentIds = [document.Id]
-        }, cancellationToken);
-
-        var userIds = documentUsers
-            .Select(documentUser => documentUser.UserId)
-            .ToArray();
-
-        return await authApiService.GetUserEmailsByIdsAsync(userIds, cancellationToken);
-    }
-
     public Task<IEnumerable<DocumentUser>> GetDocumentUsersAsync(
         GetDocumentUsersDto dto,
         CancellationToken cancellationToken = default)
@@ -119,17 +101,7 @@ internal class DocumentService(
     {
         return documentCompositeRepository.GetAsync(userId, cancellationToken);
     }
-
-    public Task<IEnumerable<DocumentInfo>> GetDocumentsThatCurrentUserWasInvitedAsync(
-        int userId,
-        CancellationToken cancellationToken = default)
-    {
-        return documentCompositeRepository.GetAsync(new DocumentInfoFilter
-        {
-            FollowerIds = [userId]
-        }, cancellationToken);
-    }
-
+    
     public async Task<IEnumerable<UserInfo>> GetUsersOfCurrentDocument(
         int documentId,
         CancellationToken cancellationToken = default)

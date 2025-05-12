@@ -152,42 +152,6 @@ public class DocumentServiceTests
     }
     
     [Fact]
-    public async Task GetUserEmailsOfCurrentDocumentAsync_ReturnsEmails_WhenUsersExist()
-    {
-        // Arrange
-        var documentId = 1;
-        var userIds = new[] { 1, 2 };
-        var expectedEmails = new[] { "user1@example.com", "user2@example.com" };
-
-        _mockDocumentRepository
-            .Setup(repo => repo.GetAsync(documentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DocumentBuilder()
-                .WithId(documentId)
-                .Build());
-
-        _mockDocumentUserRepository
-            .Setup(repo => repo.GetAsync(
-                It.IsAny<DocumentUserFilter>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(userIds.Select(id => new DocumentUser
-            {
-                UserId = id
-            }));
-
-        _mockAuthApiService
-            .Setup(api => api.GetUserEmailsByIdsAsync(
-                It.IsAny<int[]>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedEmails);
-
-        // Act
-        var result = await _documentService.GetUserEmailsOfCurrentDocumentAsync(documentId);
-
-        // Assert
-        result.Should().BeEquivalentTo(expectedEmails);
-    }
-    
-    [Fact]
     public async Task UpdateDocumentContentAsync_UpdatesContent_WhenUserHasWriterAccess()
     {
         // Arrange
@@ -401,27 +365,6 @@ public class DocumentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-    }
-
-    [Fact]
-    public async Task GetDocumentsThatCurrentUserWasInvitedAsync_ReturnsDocumentsForCurrentUser()
-    {
-        // Arrange
-        var userId = 1;
-        
-        _mockDocumentCompositeRepository
-            .Setup(repo =>
-                repo.GetAsync(
-                    It.IsAny<DocumentInfoFilter>(),
-                    It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new DocumentInfo { Id = 1, Title = "SomeTitle" }]);
-        
-        // Act
-        var result = await _documentService.GetDocumentsThatCurrentUserWasInvitedAsync(userId);
-        
-        // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
     }
 
     [Fact]
