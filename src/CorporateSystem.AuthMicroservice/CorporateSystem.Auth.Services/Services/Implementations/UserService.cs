@@ -5,7 +5,6 @@ using System.Security.Claims;
 using System.Text;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
-using CorporateSystem.Auth.Domain.Exceptions;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
@@ -132,14 +131,27 @@ internal class UserService(
         
         logger.LogInformation($"{nameof(RegisterAsync)}: Code {code} was written in redis");
         logger.LogInformation($"{nameof(RegisterAsync)}: Writing message to notification microservice");
-        
-        await grpcNotificationClient.SendMessageAsync(new SendMessageRequest
+
+        try
         {
-            Title = "Регистрация в CorporateSystem",
-            Message = $"Ваш код подтверждения: {code}",
-            ReceiverEmails = { dto.Email },
-            Token = _notificationOptions.Token
-        }, cancellationToken);
+            await grpcNotificationClient.SendMessageAsync(new SendMessageRequest
+            {
+                Title = "Регистрация в CorporateSystem",
+                Message = $"Ваш код подтверждения: {code}",
+                ReceiverEmails = { dto.Email },
+                Token = _notificationOptions.Token
+            }, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            logger.LogError($"{nameof(RegisterAsync)}: {e.Message}");
+            
+            // Обвалилась отправка в мкс Notification, но запись в БД redis прошла успешно,
+            // поэтому нужно откатить эту запись
+            await registrationCodesRepository.DeleteAsync([dto.Email, code], cancellationToken);
+            
+            throw;
+        }
         
         logger.LogInformation($"{nameof(RegisterAsync)}: Sending to notification is completed");
     }

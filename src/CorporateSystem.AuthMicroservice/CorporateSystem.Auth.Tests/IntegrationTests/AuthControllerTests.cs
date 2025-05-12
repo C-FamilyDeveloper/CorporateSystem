@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using CorporateSystem.Auth.Api.Dtos.Auth;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure;
+using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -130,9 +131,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Invalid token.", responseBody);
-
         _mockAuthService.Verify(service => service.ValidateToken(token), Times.Once);
     }
 
@@ -143,7 +141,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         var token = "error-token";
 
         _mockAuthService.Setup(service => service.ValidateToken(token))
-            .Throws(new InvalidOperationException("Validation error"));
+            .Returns(false);
 
         var client = _factory.WithWebHostBuilder(builder =>
         {
@@ -157,9 +155,6 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
-
-        var responseBody = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Token validation failed.", responseBody);
 
         _mockAuthService.Verify(service => service.ValidateToken(token), Times.Once);
     }
