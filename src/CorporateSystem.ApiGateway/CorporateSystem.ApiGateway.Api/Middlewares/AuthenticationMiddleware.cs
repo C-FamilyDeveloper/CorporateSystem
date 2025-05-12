@@ -41,6 +41,8 @@ public class AuthenticationMiddleware
             }
         
             await _next(context);
+
+            context.Request.Headers.Remove("X-User-Info");
         }
         catch (Exception e)
         {

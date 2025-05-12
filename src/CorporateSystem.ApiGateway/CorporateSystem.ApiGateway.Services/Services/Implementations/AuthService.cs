@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using CorporateSystem.ApiGateway.Services.Dtos;
 using CorporateSystem.ApiGateway.Services.Options;
 using CorporateSystem.ApiGateway.Services.Services.Interfaces;
@@ -25,6 +26,8 @@ internal class AuthService(
             Method = HttpMethod.Post,
             RequestUri = new Uri(client.BaseAddress, "/api/auth/validate-token")
         };
+        
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         
         var response = await client.SendAsync(request, cancellationToken);
         logger.LogInformation(

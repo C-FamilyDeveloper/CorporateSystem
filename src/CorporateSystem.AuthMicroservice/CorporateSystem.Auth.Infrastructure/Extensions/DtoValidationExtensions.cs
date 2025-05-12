@@ -1,6 +1,4 @@
-﻿using System.Net;
-using CorporateSystem.Auth.Domain.Exceptions;
-using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+﻿using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace CorporateSystem.Auth.Infrastructure.Extensions;
@@ -9,15 +7,16 @@ internal static class DtoValidationExtensions
 {
     public static void ShouldBeValid<T>(this AddUserDto dto, ILogger<T> logger)
     {
-        try
+        if (string.IsNullOrWhiteSpace(dto.Email))
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(dto.Email);
-            ArgumentException.ThrowIfNullOrWhiteSpace(dto.Password);
+            logger.LogError($"{nameof(ShouldBeValid)}: email is null or white space");
+            throw new ArgumentException("Некорректный email");
         }
-        catch (ArgumentException e)
+
+        if (string.IsNullOrWhiteSpace(dto.Password))
         {
-            logger.LogError(e.Message);
-            throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest, e);
+            logger.LogError($"{nameof(ShouldBeValid)}: password is null or white space");
+            throw new ArgumentException("Некорректный пароль");
         }
     }
 }

@@ -53,6 +53,7 @@ public class Startup
     
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
+        app.UseMiddleware<ExceptionMiddleware>();
         app.UseMiddleware<UserInfoMiddleware>();
         app.UseHttpsRedirection();
         

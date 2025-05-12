@@ -1,4 +1,6 @@
 ﻿using CorporateSystem.SharedDocs.Api.Hubs;
+using CorporateSystem.SharedDocs.Services.Handlers;
+using CorporateSystem.SharedDocs.Services.Services.Implementations;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -31,13 +33,9 @@ public class CustomWebApplicationFactory<TEntryPoint>
 
         builder.ConfigureServices(services =>
         {
-            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-            
             services.Replace(new ServiceDescriptor(typeof(IDocumentService), MockDocumentService.Object));
             services.Replace(new ServiceDescriptor(typeof(IAuthApiService), MockAuthApiService.Object));
         });
-        
-        
     }
 
     public async Task InitializeAsync()
@@ -49,5 +47,11 @@ public class CustomWebApplicationFactory<TEntryPoint>
     {
         await _postgresContainer.DisposeAsync();
         await base.DisposeAsync();
+    }
+
+    public void ResetMocks()
+    {
+        MockDocumentService.Invocations.Clear();
+        MockAuthApiService.Invocations.Clear();
     }
 }

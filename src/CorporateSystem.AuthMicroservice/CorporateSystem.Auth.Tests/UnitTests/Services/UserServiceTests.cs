@@ -3,9 +3,9 @@ using System.Security.Claims;
 using System.Text;
 using AutoFixture.Xunit2;
 using CorporateSystem.Auth.Domain.Enums;
-using CorporateSystem.Auth.Domain.Exceptions;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Implementations;
@@ -88,7 +88,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
         var request = new SuccessRegisterUserDto(email, password, successCode);
         // Assert
 
-        await Assert.ThrowsAsync<ExceptionWithStatusCode>(async () =>
+        await Assert.ThrowsAsync<InvalidRegistrationException>(async () =>
         {
             await userService.SuccessRegisterAsync(request);
         });
@@ -155,7 +155,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             Mock.Of<ILogger<UserService>>());
         
         // Assert
-        await Assert.ThrowsAsync<ExceptionWithStatusCode>(async () =>
+        await Assert.ThrowsAsync<InvalidAuthorizationException>(async () =>
         {
             var authUserDtoWithInvalidPassword = new AuthUserDto(email, invalidPassword);
 
@@ -184,7 +184,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             Mock.Of<ILogger<UserService>>());
         
         // Assert
-        await Assert.ThrowsAsync<ExceptionWithStatusCode>(async () =>
+        await Assert.ThrowsAsync<InvalidAuthorizationException>(async () =>
         {
             var authUserDtoWithInvalidPassword = new AuthUserDto(email, password);
 

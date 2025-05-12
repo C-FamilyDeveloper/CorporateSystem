@@ -8,3 +8,4 @@ public record struct UpdateDocumentContentDto(int DocumentId, int UserId, string
 public record struct DocumentUserInfo(int UserId, AccessLevel AccessLevel);
 public record struct GetDocumentUsersDto(int DocumentId, int[] UserIds);
 public record struct DeleteUserFromDocumentDto(int DocumentId, int UserId);
+public record struct UserInfo(string Email);

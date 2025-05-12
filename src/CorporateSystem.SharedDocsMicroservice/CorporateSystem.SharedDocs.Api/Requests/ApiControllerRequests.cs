@@ -22,29 +22,8 @@ public class DocumentUserInfoDto
     public AccessLevel AccessLevel { get; init; }
 }
 
-public class GetDocumentsResponse
-{
-    [JsonPropertyName("id")]
-    public int Id { get; init; }
-    
-    [JsonPropertyName("title")]
-    public required string Title { get; init; }
-}
-
 public class CreateDocumentRequest
 {
     [JsonPropertyName("title")]
     public required string Title { get; init; }
-}
-
-public class CreateDocumentResponse
-{
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-    
-    [JsonPropertyName("title")]
-    public required string Title { get; set; }
-    
-    [JsonPropertyName("content")]
-    public required string Content { get; set; }
 }

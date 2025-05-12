@@ -1,10 +1,7 @@
-﻿using System.Net;
-using CorporateSystem.Auth.Domain.Exceptions;
-using CorporateSystem.Auth.Infrastructure.Options;
+﻿using CorporateSystem.Auth.Infrastructure.Options;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using StackExchange.Redis;
 
 namespace CorporateSystem.Auth.Infrastructure.Repositories.Implementations;
 
@@ -32,7 +29,7 @@ internal class RegistrationCodesRepository(
         if (!int.TryParse(value, out var result))
         {
             logger.LogError($"{nameof(GetAsync)}: Не удается преобразовать {value} в int");
-            throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest);
+            throw new ArgumentException("Что-то пошло не так");
         }
 
         return result;

@@ -1,11 +1,10 @@
-﻿using System.Net;
-using CorporateSystem.SharedDocs.Domain.Entities;
+﻿using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Domain.Enums;
-using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Filters;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Services.Exceptions;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using CreateDocumentDto = CorporateSystem.SharedDocs.Services.Dtos.CreateDocumentDto;
@@ -16,7 +15,8 @@ internal class DocumentService(
     ILogger<DocumentService> logger,
     IDocumentRepository documentRepository,
     IDocumentUserRepository documentUserRepository,
-    IAuthApiService authApiService) : IDocumentService
+    IAuthApiService authApiService,
+    IDocumentCompositeRepository documentCompositeRepository) : IDocumentService
 {
     public async Task<Document> GetDocumentAsync(int documentId, CancellationToken cancellationToken = default)
     {
@@ -25,7 +25,7 @@ internal class DocumentService(
         if (document is null)
         {
             logger.LogError($"{nameof(GetDocumentAsync)}: document with id={documentId} not found");
-            throw new ExceptionWithStatusCode("Документ не был найден", HttpStatusCode.NotFound);
+            throw new FileNotFoundException("Документ не был найден");
         }
 
         return document;
@@ -36,10 +36,6 @@ internal class DocumentService(
         var ids = await documentRepository.CreateAsync(
             [new Infrastructure.Dtos.CreateDocumentDto(dto.OwnerId, dto.Title, dto.Content)],
             cancellationToken);
-
-        await documentUserRepository.CreateAsync([
-            new CreateDocumentUserDto(ids.Single(), dto.OwnerId, AccessLevel.Writer)
-        ], cancellationToken);
         
         return ids.Single();
     }
@@ -70,9 +66,7 @@ internal class DocumentService(
             if (currentDocumentUserIds.Contains(userInfo.UserId))
             {
                 logger.LogError($"{nameof(AddUsersToDocumentAsync)} Попытка добавить пользователя с идентификатором {userInfo.UserId}, который уже был добавлен ранее к текущему документу");
-                throw new ExceptionWithStatusCode(
-                    "Попытка добавить уже существующего пользователя",
-                    HttpStatusCode.BadRequest);
+                throw new UserAlreadyExistException("Попытка добавить уже существующего пользователя");
             }
             
             userIdsWhichNeedAdded.Add(userInfo);
@@ -94,11 +88,11 @@ internal class DocumentService(
         int documentId,
         CancellationToken cancellationToken = default)
     {
-        await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
+        var document = await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
 
         var documentUsers = await documentUserRepository.GetAsync(new DocumentUserFilter
         {
-            DocumentIds = [documentId]
+            DocumentIds = [document.Id]
         }, cancellationToken);
 
         var userIds = documentUsers
@@ -119,24 +113,41 @@ internal class DocumentService(
         }, cancellationToken);
     }
 
-    public Task<IEnumerable<Document>> GetCurrentUserDocuments(
+    public Task<IEnumerable<DocumentInfo>> GetCurrentUserDocuments(
         int userId,
         CancellationToken cancellationToken = default)
     {
-        return documentRepository.GetAsync(new DocumentFilter
-        {
-            OwnerIds = [userId]
-        }, cancellationToken);
+        return documentCompositeRepository.GetAsync(userId, cancellationToken);
     }
 
     public Task<IEnumerable<DocumentInfo>> GetDocumentsThatCurrentUserWasInvitedAsync(
         int userId,
         CancellationToken cancellationToken = default)
     {
-        return documentUserRepository.GetAsync(new DocumentInfoFilter
+        return documentCompositeRepository.GetAsync(new DocumentInfoFilter
         {
             FollowerIds = [userId]
         }, cancellationToken);
+    }
+
+    public async Task<IEnumerable<UserInfo>> GetUsersOfCurrentDocument(
+        int documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var currentDocument = await GetDocumentOrThrowExceptionAsync(documentId, cancellationToken);
+
+        var usersCurrentDocument = await documentUserRepository.GetAsync(new DocumentUserFilter
+        {
+            DocumentIds = [currentDocument.Id]
+        }, cancellationToken);
+
+        var usersIds = usersCurrentDocument
+            .Select(user => user.UserId)
+            .ToArray();
+
+        var userEmails = await authApiService.GetUserEmailsByIdsAsync(usersIds, cancellationToken);
+
+        return userEmails.Select(email => new UserInfo(email));
     }
 
     public async Task UpdateDocumentContentAsync(
@@ -157,9 +168,7 @@ internal class DocumentService(
         {
             logger.LogError(
                 $"{nameof(UpdateDocumentContentAsync)}: User с id={currentUser.UserId} попытался изменить файл (document id={document.Id}), в котором у него доступ AccessLevel={currentUser.AccessLevel.ToString()}");
-            throw new ExceptionWithStatusCode(
-                "У вас недостаточно прав для выполнения этой операции",
-                HttpStatusCode.Forbidden);
+            throw new InsufficientPermissionsException("У вас недостаточно прав для выполнения этой операции");
         }
 
         await documentRepository.UpdateAsync(
@@ -196,9 +205,7 @@ internal class DocumentService(
         if (document is null)
         {
             logger.LogError($"{nameof(GetDocumentOrThrowExceptionAsync)}: Документ с идентификатором {id} не найден");
-            throw new ExceptionWithStatusCode(
-                $"Документ с идентификатором {id} не найден",
-                HttpStatusCode.NotFound);
+            throw new FileNotFoundException($"Документ с идентификатором {id} не найден");
         }
 
         return document;

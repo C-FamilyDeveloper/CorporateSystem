@@ -8,8 +8,8 @@ internal abstract class PostgreRepository(PostgresOptions postgresOptions)
 {
     protected const int DefaultTimeoutInSeconds = 5;
     protected abstract string TableName { get; }
-    
-    public TransactionScope CreateTransactionScope(IsolationLevel level = IsolationLevel.ReadCommitted)
+
+    protected TransactionScope CreateTransactionScope(IsolationLevel level = IsolationLevel.ReadCommitted)
     {
         return new TransactionScope(
             TransactionScopeOption.Required,
