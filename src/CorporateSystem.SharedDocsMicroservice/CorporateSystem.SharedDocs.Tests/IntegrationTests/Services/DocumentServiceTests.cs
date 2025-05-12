@@ -1,13 +1,14 @@
 ﻿using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Domain.Enums;
-using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Filters;
 using CorporateSystem.SharedDocs.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Services.Exceptions;
 using CorporateSystem.SharedDocs.Services.Services.Implementations;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using CorporateSystem.SharedDocs.Tests.Builders;
+using CorporateSystem.SharedDocs.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -21,6 +22,7 @@ public class DocumentServiceTests
     private readonly Mock<IDocumentRepository> _mockDocumentRepository;
     private readonly Mock<IDocumentUserRepository> _mockDocumentUserRepository;
     private readonly Mock<IAuthApiService> _mockAuthApiService;
+    private readonly Mock<IDocumentCompositeRepository> _mockDocumentCompositeRepository;
     private readonly DocumentService _documentService;
 
     public DocumentServiceTests()
@@ -29,12 +31,14 @@ public class DocumentServiceTests
         _mockDocumentRepository = new Mock<IDocumentRepository>();
         _mockDocumentUserRepository = new Mock<IDocumentUserRepository>();
         _mockAuthApiService = new Mock<IAuthApiService>();
+        _mockDocumentCompositeRepository = new Mock<IDocumentCompositeRepository>();
         
         _documentService = new DocumentService(
             _mockLogger.Object,
             _mockDocumentRepository.Object,
             _mockDocumentUserRepository.Object,
-            _mockAuthApiService.Object);
+            _mockAuthApiService.Object,
+            _mockDocumentCompositeRepository.Object);
     }
     
     [Fact]
@@ -53,14 +57,7 @@ public class DocumentServiceTests
                 It.IsAny<Infrastructure.Dtos.CreateDocumentDto[]>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([1]);
-
-        _mockDocumentUserRepository
-            .Setup(repo =>
-                repo.CreateAsync(
-                    It.IsAny<CreateDocumentUserDto[]>(),
-                    It.IsAny<CancellationToken>()))
-            .ReturnsAsync([1]);
-
+        
         // Act
         var result = await _documentService.CreateDocumentAsync(dto);
 
@@ -74,11 +71,6 @@ public class DocumentServiceTests
                 dtos[0].Title == dto.Title &&
                 dtos[0].Content == dto.Content),
             It.IsAny<CancellationToken>()), Times.Once);
-        
-        _mockDocumentUserRepository.Verify(repo =>
-            repo.CreateAsync(
-                It.IsAny<CreateDocumentUserDto[]>(),
-                It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
@@ -155,7 +147,7 @@ public class DocumentServiceTests
 
         // Act & Assert
         var act = () => _documentService.AddUsersToDocumentAsync(dto);
-        await act.Should().ThrowAsync<ExceptionWithStatusCode>()
+        await act.Should().ThrowAsync<UserAlreadyExistException>()
             .WithMessage("Попытка добавить уже существующего пользователя");
     }
     
@@ -268,7 +260,7 @@ public class DocumentServiceTests
 
         // Act & Assert
         Func<Task> act = () => _documentService.UpdateDocumentContentAsync(dto);
-        await act.Should().ThrowAsync<ExceptionWithStatusCode>()
+        await act.Should().ThrowAsync<InsufficientPermissionsException>()
             .WithMessage("У вас недостаточно прав для выполнения этой операции");
     }
     
@@ -366,17 +358,21 @@ public class DocumentServiceTests
         var userId = 1;
         var expectedDocuments = new[]
         {
-            new DocumentBuilder()
-                .WithOwnerId(userId)
-                .Build(),
-            new DocumentBuilder()
-                .WithOwnerId(userId)
-                .Build()
+            new DocumentInfo
+            {
+                Title = StringHelper.GetUniqueString(),
+                Id = Int.GetUniqueNumber()
+            },
+            new DocumentInfo
+            {
+                Title = StringHelper.GetUniqueString(),
+                Id = Int.GetUniqueNumber()
+            }
         };
         
-        _mockDocumentRepository
+        _mockDocumentCompositeRepository
             .Setup(repo => repo.GetAsync(
-                It.IsAny<DocumentFilter>(),
+                It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedDocuments);
 
@@ -386,7 +382,6 @@ public class DocumentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.Length);
-        Assert.All(result, doc => Assert.Equal(userId, doc.OwnerId));
     }
 
     [Fact]
@@ -414,7 +409,7 @@ public class DocumentServiceTests
         // Arrange
         var userId = 1;
         
-        _mockDocumentUserRepository
+        _mockDocumentCompositeRepository
             .Setup(repo =>
                 repo.GetAsync(
                     It.IsAny<DocumentInfoFilter>(),
@@ -446,7 +441,7 @@ public class DocumentServiceTests
         var result = () => _documentService.GetDocumentAsync(documentId);
 
         // Assert
-        await result.Should().ThrowAsync<ExceptionWithStatusCode>().WithMessage("Документ не был найден");
+        await result.Should().ThrowAsync<FileNotFoundException>().WithMessage("Документ не был найден");
     }
     
     [Fact]

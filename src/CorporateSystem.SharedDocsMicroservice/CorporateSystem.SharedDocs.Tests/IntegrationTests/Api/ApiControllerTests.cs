@@ -2,25 +2,31 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using CorporateSystem.SharedDocs.Api.Requests;
+using CorporateSystem.SharedDocs.Api.Responses;
 using CorporateSystem.SharedDocs.Domain.Entities;
 using CorporateSystem.SharedDocs.Domain.Enums;
+using CorporateSystem.SharedDocs.Infrastructure.Dtos;
 using CorporateSystem.SharedDocs.Services.Dtos;
+using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 using CorporateSystem.SharedDocs.Tests.Builders;
 using CorporateSystem.SharedDocs.Tests.Helpers;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Moq;
+using CreateDocumentDto = CorporateSystem.SharedDocs.Services.Dtos.CreateDocumentDto;
+using UserInfo = CorporateSystem.SharedDocs.Api.Requests.UserInfo;
 
 namespace CorporateSystem.SharedDocs.Tests.IntegrationTests.Api;
 
 public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
-    : IClassFixture<CustomWebApplicationFactory<Program>>
+    : IClassFixture<CustomWebApplicationFactory<Program>>, IDisposable
 {
     [Fact]
     public async Task AddUserToDocument_ReturnsOk_WhenUsersAreSuccessfullyAdded()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var request = new AddUserToDocumentRequest
         {
@@ -67,7 +73,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task AddUserToDocument_ReturnsBadRequest_WhenUserAlreadyAdded()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var documentId = 1;
         
@@ -118,7 +124,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task GetDocumentForCurrentUser_ReturnsOk_WithDocuments_ForValidUser()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var title1 = StringHelper.GetUniqueString();
         var title2 = StringHelper.GetUniqueString();
@@ -126,12 +132,16 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         var userInfo = new UserInfo { Id = 1, Role = "Writer" };
         var documents = new[]
         {
-            new DocumentBuilder()
-                .WithTitle(title1)
-                .Build(),
-            new DocumentBuilder()
-                .WithTitle(title2)
-                .Build()
+            new DocumentInfo
+            {
+                Title = title1,
+                Id = Int.GetUniqueNumber()
+            },
+            new DocumentInfo
+            {
+                Title = title2,
+                Id = Int.GetUniqueNumber()
+            }
         };
         
         factory.MockDocumentService
@@ -166,7 +176,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task GetDocumentForCurrentUser_ReturnsBadRequest_WhenUserInfoIsMissing()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/get-documents-for-current-user");
 
@@ -184,7 +194,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task CreateDocument_ReturnsCreatedDocument_WhenRequestIsValid()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var userInfo = new UserInfo { Id = 1, Role = "Writer" };
         var request = new CreateDocumentRequest { Title = "New Document" };
@@ -229,11 +239,11 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     [Fact]
     public async Task DeleteUserFromDocument_ReturnsOk_WhenUserIsOwner()
     {
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var userInfo = new UserInfo { Id = 1, Role = "Writer" };
         var documentId = 1;
-        var userId = 2;
+        var userEmail = "someEmail@email.com";
         
         factory.MockDocumentService
             .Setup(service => service.GetDocumentAsync(
@@ -247,12 +257,18 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         
         factory.MockDocumentService
             .Setup(service => service.DeleteUsersFromCurrentDocumentAsync(
-                It.Is<DeleteUserFromDocumentDto>(dto =>
-                    dto.DocumentId == documentId && dto.UserId == userId),
+                It.IsAny<DeleteUserFromDocumentDto>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+        factory.MockAuthApiService
+            .Setup(service =>
+                service.GetUserIdsByEmailsAsync(
+                    It.IsAny<string[]>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([userInfo.Id + 1]);
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userEmail={userEmail}");
         httpRequest.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
 
         // Act
@@ -269,8 +285,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
 
         factory.MockDocumentService.Verify(
             service => service.DeleteUsersFromCurrentDocumentAsync(
-                It.Is<DeleteUserFromDocumentDto>(dto =>
-                    dto.DocumentId == documentId && dto.UserId == userId),
+                It.IsAny<DeleteUserFromDocumentDto>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -279,21 +294,28 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task DeleteUserFromDocument_ReturnsForbidden_WhenUserIsNotOwner()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var userInfo = new UserInfo { Id = 2, Role = "Writer" };
         var documentId = 1;
-        var userId = 3;
+        var userEmail = "test@email.com";
         
         factory.MockDocumentService
             .Setup(service => service.GetDocumentAsync(documentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
                 new DocumentBuilder()
                     .WithId(documentId)
-                    .WithOwnerId(userId)
+                    .WithOwnerId(userInfo.Id + 1)
                     .Build());
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+        factory.MockAuthApiService
+            .Setup(service =>
+                service.GetUserIdsByEmailsAsync(
+                    It.IsAny<string[]>(),
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync([1]);
+        
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userEmail={userEmail}");
         httpRequest.Headers.Add("X-User-Info", JsonSerializer.Serialize(userInfo));
 
         // Act
@@ -302,7 +324,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadFromJsonAsync<string>();
         responseBody.Should().Contain("У вас нет прав на выполнение текущей операции");
 
         factory.MockDocumentService.Verify(
@@ -320,19 +342,19 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task DeleteUserFromDocument_ReturnsBadRequest_WhenUserInfoIsMissing()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var documentId = 1;
-        var userId = 2;
+        var userEmail = "someEmail@email.com";
         
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userId={userId}");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/delete-user-from-document/{documentId}?userEmail={userEmail}");
 
         factory.MockDocumentService
             .Setup(service =>
                 service.GetDocumentAsync(
                     It.IsAny<int>(),
                     It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DocumentBuilder().Build());
+            .ReturnsAsync(new DocumentBuilder().WithId(documentId).Build());
         
         // Act
         var response = await httpClient.SendAsync(httpRequest);
@@ -358,7 +380,7 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
     public async Task CreateDocument_ReturnsBadRequest_WhenUserInfoIsMissing()
     {
         // Arrange
-        var httpClient = factory.CreateClient();
+        using var httpClient = factory.CreateClient();
 
         var request = new CreateDocumentRequest { Title = "New Document" };
         
@@ -375,5 +397,10 @@ public class ApiControllerTests(CustomWebApplicationFactory<Program> factory)
 
         var responseBody = await response.Content.ReadAsStringAsync();
         responseBody.Should().Contain("Отсутствует информация о пользователе");
+    }
+
+    public void Dispose()
+    {
+        factory.ResetMocks();
     }
 }

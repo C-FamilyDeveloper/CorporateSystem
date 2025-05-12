@@ -10,16 +10,10 @@ using Microsoft.Extensions.Options;
 namespace CorporateSystem.SharedDocs.Tests.IntegrationTests.Repositories;
 
 [Collection("PostgresCollection")]
-public class DocumentRepositoryTests
+public class DocumentRepositoryTests : BaseRepositoryTests
 {
-    private readonly PostgresContainer _fixture;
-
-    public DocumentRepositoryTests(PostgresContainer postgresContainer)
+    public DocumentRepositoryTests(PostgresContainer postgresContainer) : base(postgresContainer)
     {
-        _fixture = postgresContainer;
-        
-        var migrator = new Migrator(_fixture.ConnectionString);
-        migrator.ApplyMigrations();
     }
 
     [Fact]
@@ -163,7 +157,7 @@ public class DocumentRepositoryTests
         await repository.DeleteAsync(filter);
 
         // Assert
-        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        var remainingDocuments = (await repository.GetAsync((DocumentFilter)null)).ToArray();
         Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
     }
     
@@ -201,7 +195,7 @@ public class DocumentRepositoryTests
         await repository.DeleteAsync(filter);
 
         // Assert
-        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        var remainingDocuments = (await repository.GetAsync((DocumentFilter)null)).ToArray();
         Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
     }
     
@@ -238,7 +232,7 @@ public class DocumentRepositoryTests
         await repository.DeleteAsync(filter);
 
         // Assert
-        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        var remainingDocuments = (await repository.GetAsync((DocumentFilter)null)).ToArray();
         Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
     }
     
@@ -278,7 +272,7 @@ public class DocumentRepositoryTests
         await repository.DeleteAsync(filter);
 
         // Assert
-        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        var remainingDocuments = (await repository.GetAsync((DocumentFilter)null)).ToArray();
         Assert.Contains(remainingDocuments, document => document.Id == createdDocumentIds[1]);
     }
     
@@ -307,7 +301,7 @@ public class DocumentRepositoryTests
         await repository.DeleteAsync();
 
         // Assert
-        var remainingDocuments = (await repository.GetAsync()).ToArray();
+        var remainingDocuments = (await repository.GetAsync((DocumentFilter)null)).ToArray();
         Assert.Empty(remainingDocuments);
     }
     
@@ -469,10 +463,4 @@ public class DocumentRepositoryTests
         Assert.Equal(ownerId1, document.OwnerId);
         Assert.Equal(title1, document.Title);
     }
-    
-    private IDocumentRepository GetDocumentRepository() => 
-        new DocumentRepository(Options.Create(new PostgresOptions
-        {
-            ConnectionString = _fixture.ConnectionString
-        }));
 }

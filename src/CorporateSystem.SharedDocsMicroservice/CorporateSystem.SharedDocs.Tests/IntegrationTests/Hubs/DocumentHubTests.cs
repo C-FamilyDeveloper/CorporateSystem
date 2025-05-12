@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Moq.Protected;
+using UserInfo = CorporateSystem.SharedDocs.Api.Requests.UserInfo;
 
 namespace CorporateSystem.SharedDocs.Tests.IntegrationTests.Hubs;
 

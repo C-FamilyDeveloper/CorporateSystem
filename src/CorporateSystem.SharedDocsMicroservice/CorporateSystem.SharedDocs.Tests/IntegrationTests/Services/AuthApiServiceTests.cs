@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Json;
-using CorporateSystem.SharedDocs.Domain.Exceptions;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Options;
 using CorporateSystem.SharedDocs.Services.Services.Implementations;
@@ -40,7 +39,7 @@ public class AuthApiServiceTests
 
         _httpClientFactory = mockHttpClientFactory.Object;
         
-        _authApiService = new AuthApiService(_mockOptions.Object, _httpClientFactory, _mockLogger.Object);
+        _authApiService = new AuthApiService(_mockOptions.Object, _httpClientFactory.CreateClient(), _mockLogger.Object);
     }
     
     [Fact]
@@ -94,8 +93,7 @@ public class AuthApiServiceTests
 
         // Act & Assert
         var act = () => _authApiService.GetUserEmailsByIdsAsync(ids);
-        await act.Should().ThrowAsync<ExceptionWithStatusCode>()
-            .WithMessage("Что-то пошло не так");
+        await act.Should().ThrowAsync<ArgumentException>();
     }
     
     [Fact]
@@ -173,8 +171,7 @@ public class AuthApiServiceTests
 
         // Act & Assert
         var act = () => _authApiService.GetUserIdsByEmailsAsync(emails);
-        await act.Should().ThrowAsync<ExceptionWithStatusCode>()
-            .WithMessage("Что-то пошло не так");
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
     
     [Fact]
