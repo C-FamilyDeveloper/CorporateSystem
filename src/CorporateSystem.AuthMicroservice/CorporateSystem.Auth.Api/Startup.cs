@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
+using CorporateSystem.Auth.Api.Middlewares;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Extensions;
 using CorporateSystem.Auth.Infrastructure.Options;
@@ -55,7 +57,8 @@ public class Startup
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(Configuration.GetSection("JwtToken")["JwtSecret"]!))
+                    Encoding.UTF8.GetBytes(Configuration.GetSection("JwtToken")["JwtSecret"]!)),
+                RoleClaimType = ClaimTypes.Role
             };
         });
         
@@ -77,6 +80,8 @@ public class Startup
                 logger.LogError(ex, "Ошибка возникла при попытке запуска транзакций");
             }
         }
+
+        app.UseMiddleware<ExceptionMiddleware>();
         
         if (env.IsDevelopment())
         {
@@ -86,9 +91,9 @@ public class Startup
         }
 
         app.UseHttpsRedirection();
-        app.UseAuthentication();
-        
         app.UseRouting();
+        
+        app.UseAuthentication();
         app.UseAuthorization();
         app.UseEndpoints(endpoints =>
         {

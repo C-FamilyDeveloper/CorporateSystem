@@ -7,6 +7,7 @@ using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Domain.Exceptions;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.Filters;
@@ -48,7 +49,7 @@ internal class UserService(
                 ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
                 : $"{nameof(AuthenticateAsync)}: email={dto.Email}, actual_password={dto.Password}, expected_password={user.Password}");
             
-            throw new ExceptionWithStatusCode("Неправильный логин или пароль", HttpStatusCode.Unauthorized);
+            throw new InvalidAuthorizationException("Неправильный логин или пароль");
         }
         
         return GenerateJwtToken(user);
@@ -106,7 +107,7 @@ internal class UserService(
         if (dto.Password != dto.RepeatedPassword)
         {
             logger.LogInformation($"{nameof(RegisterAsync)}: password={dto.Password}, repeated password={dto.RepeatedPassword}");
-            throw new ExceptionWithStatusCode("Пароли не совпадают", HttpStatusCode.BadRequest);
+            throw new InvalidRegistrationException("Пароли не совпадают");
         }
 
         var existingUser = await userRepository.GetUserByEmailAsync(dto.Email, cancellationToken);
@@ -114,15 +115,13 @@ internal class UserService(
         if (existingUser is not null)
         {
             logger.LogInformation($"{nameof(RegisterAsync)}: User с email={dto.Email} уже существует");
-            throw new ExceptionWithStatusCode("Данная почта уже занята", HttpStatusCode.BadRequest);
+            throw new InvalidRegistrationException("Данная почта уже занята");
         }
 
         if (await registrationCodesRepository.GetAsync([dto.Email], cancellationToken) != null)
         {
             logger.LogInformation($"{nameof(RegisterAsync)}: ключ с {dto.Email} уже сущесвует");
-            throw new ExceptionWithStatusCode(
-                "Вам на почту уже отправлен код. Попробуйте получить новый позже.",
-                HttpStatusCode.BadRequest);
+            throw new InvalidRegistrationException("Вам на почту уже отправлен код. Попробуйте получить новый позже.");
         }
         
         var code = Random.Shared.Next(100_000, 1_000_000);
@@ -151,7 +150,7 @@ internal class UserService(
 
         if (await registrationCodesRepository.GetAsync([dto.Email], cancellationToken) is null)
         {
-            throw new ExceptionWithStatusCode("Неверный код", HttpStatusCode.BadRequest);
+            throw new InvalidRegistrationException("Неверный код");
         }
 
         await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);

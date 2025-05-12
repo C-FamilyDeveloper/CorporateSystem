@@ -1,6 +1,4 @@
-﻿using System.Net;
-using CorporateSystem.Auth.Domain.Entities;
-using CorporateSystem.Auth.Domain.Exceptions;
+﻿using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Infrastructure.Extensions;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +12,8 @@ internal class UserRepository(IContextFactory contextFactory, ILogger<UserReposi
     {
         if (string.IsNullOrWhiteSpace(email))
         {
-            throw new ExceptionWithStatusCode("Что-то пошло не так", HttpStatusCode.BadRequest);
+            logger.LogError($"{nameof(GetUserByEmailAsync)}: email is null or white space");
+            throw new ArgumentException("Некорректный email");
         }
 
         return await contextFactory.ExecuteWithoutCommitAsync(
