@@ -20,6 +20,7 @@ public class CustomWebApplicationFactory<TEntryPoint>
     
     public Mock<IDocumentService> MockDocumentService { get; } = new();
     public Mock<IAuthApiService> MockAuthApiService { get; } = new();
+    public Mock<IDocumentChangeLogService> MockDocumentChangeLogService { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -35,6 +36,7 @@ public class CustomWebApplicationFactory<TEntryPoint>
         {
             services.Replace(new ServiceDescriptor(typeof(IDocumentService), MockDocumentService.Object));
             services.Replace(new ServiceDescriptor(typeof(IAuthApiService), MockAuthApiService.Object));
+            services.Replace(new ServiceDescriptor(typeof(IDocumentChangeLogService), MockDocumentChangeLogService.Object));
         });
     }
 
@@ -53,5 +55,6 @@ public class CustomWebApplicationFactory<TEntryPoint>
     {
         MockDocumentService.Invocations.Clear();
         MockAuthApiService.Invocations.Clear();
+        MockDocumentChangeLogService.Invocations.Clear();
     }
 }

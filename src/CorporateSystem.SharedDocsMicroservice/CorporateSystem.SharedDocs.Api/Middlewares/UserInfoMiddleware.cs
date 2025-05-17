@@ -38,6 +38,17 @@ public class UserInfoMiddleware
         {
             _logger.LogInformation($"{nameof(InvokeAsync)}: Headers dont have X-User-Info");
         }
+
+        if (context.Request.Headers.TryGetValue("Authorization", out var tokenHeader))
+        {
+            var token = tokenHeader.ToString().Replace("Bearer ", string.Empty);
+            _logger.LogInformation($"{nameof(InvokeAsync)}: token={token}");
+            context.Items["Authorization"] = token;
+        }
+        else
+        {
+            _logger.LogInformation($"{nameof(InvokeAsync)}: Header dont have Authorization");
+        }
         
         await _next(context);
     }

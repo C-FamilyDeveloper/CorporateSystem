@@ -14,6 +14,8 @@ public static class ServiceCollectionExtensions
             .AddHttpClient<IAuthApiService, AuthApiService>()
             .AddHttpMessageHandler<AuthHeaderHandler>();
         
-        return services.AddScoped<IDocumentService, DocumentService>();
+        return services
+            .AddScoped<IDocumentService, DocumentService>()
+            .AddScoped<IDocumentChangeLogService, DocumentChangeLogService>();
     }
 }

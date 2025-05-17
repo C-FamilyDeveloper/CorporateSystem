@@ -1,4 +1,6 @@
-﻿namespace CorporateSystem.Auth.Services.Services.Interfaces;
+﻿using CorporateSystem.Auth.Domain.Enums;
+
+namespace CorporateSystem.Auth.Services.Services.Interfaces;
 
 public interface IRegistrationService
 {
@@ -7,4 +9,10 @@ public interface IRegistrationService
 }
 
 public record struct RegisterUserDto(string Email, string Password, string RepeatedPassword);
-public record struct SuccessRegisterUserDto(string Email, string Password, int SuccessCode);
+public record struct SuccessRegisterUserDto(
+    string Email, 
+    string Password,
+    int SuccessCode, 
+    string FirstName,
+    string LastName,
+    Gender Gender);

@@ -35,4 +35,10 @@ public class BaseRepositoryTests : IClassFixture<PostgresContainer>
         {
             ConnectionString = Fixture.ConnectionString
         }));
+
+    protected IDocumentChangeLogRepository GetDocumentChangeLogRepository() =>
+        new DocumentChangeLogRepository(Options.Create(new PostgresOptions
+        {
+            ConnectionString = Fixture.ConnectionString
+        }));
 }

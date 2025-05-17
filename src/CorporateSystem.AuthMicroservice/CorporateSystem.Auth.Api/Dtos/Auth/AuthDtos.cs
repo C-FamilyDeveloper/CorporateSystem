@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using CorporateSystem.Auth.Domain.Enums;
 
 namespace CorporateSystem.Auth.Api.Dtos.Auth;
 
@@ -33,6 +34,16 @@ public class SuccessRegisterRequest
     
     [JsonPropertyName("success_code")]
     public int SuccessCode { get; init; }
+    
+    [JsonPropertyName("first_name")]
+    public required string FirstName { get; init; }
+    
+    [JsonPropertyName("last_name")]
+    public required string LastName { get; init; }
+    
+    [JsonPropertyName("gender")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public Gender Gender { get; init; }
 }
 
 public class AuthResponse

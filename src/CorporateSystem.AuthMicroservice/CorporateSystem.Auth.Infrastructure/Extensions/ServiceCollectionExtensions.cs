@@ -13,7 +13,6 @@ public static class ServiceCollectionExtensions
     {
         return services
             .AddScoped<IContextFactory, ContextFactory>()
-            .AddScoped<IUserRepository, UserRepository>()
             .AddScoped<IRegistrationCodesRepository, RegistrationCodesRepository>()
             .AddSingleton<IConnectionMultiplexer>(sp =>
             {

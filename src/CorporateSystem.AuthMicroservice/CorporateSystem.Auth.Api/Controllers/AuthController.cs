@@ -60,7 +60,13 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         }
 
         await registrationService
-            .SuccessRegisterAsync(new SuccessRegisterUserDto(request.Email, request.Password, request.SuccessCode));
+            .SuccessRegisterAsync(new SuccessRegisterUserDto(
+                request.Email,
+                request.Password,
+                request.SuccessCode,
+                request.FirstName,
+                request.LastName,
+                request.Gender));
 
         return Ok();
     }

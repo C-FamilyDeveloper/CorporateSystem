@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
@@ -10,6 +11,7 @@ using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.Interfaces;
+using CorporateSystem.Auth.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,49 +21,34 @@ using Xunit.Abstractions;
 
 namespace CorporateSystem.Auth.Tests.IntegrationTests;
 
-public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
+    : IClassFixture<CustomWebApplicationFactory<Program>>, IDisposable
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly ITestOutputHelper _testOutputHelper;
-    private readonly Mock<IAuthService> _mockAuthService;
-
-    public AuthControllerTests(WebApplicationFactory<Program> factory, ITestOutputHelper testOutputHelper)
-    {
-        _factory = factory;
-        _testOutputHelper = testOutputHelper;
-        _mockAuthService = new Mock<IAuthService>();
-    }
+    private readonly string TestSecretKey = factory.TestSecretKey;
 
     [Fact]
     public async Task ValidateToken_ValidTokenObtainedFromSignIn_ReturnsUserInfo()
     {
         // Arrange
-        var testSecretKey = "a-very-long-and-secure-test-secret-key";
-        
         var authRequest = new AuthRequest
         {
             Email = "test@example.com",
             Password = "password123"
         };
 
-        var token = GenerateValidJwtToken(testSecretKey, 1, authRequest.Email);
+        var token = JwtHelper.GenerateJwtToken(TestSecretKey, 1, authRequest.Email);
 
-        _mockAuthService.Setup(service => service.AuthenticateAsync(
+        factory.MockAuthService.Setup(service => service.AuthenticateAsync(
                 It.IsAny<AuthUserDto>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(token);
 
-        _mockAuthService
+        factory.MockAuthService
             .Setup(x => x.ValidateToken(It.Is<string>(str => str == token)))
             .Returns(true);
-        
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                services.AddSingleton(_mockAuthService.Object);
-            });
-        }).CreateClient();
+
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         
         var signInResponse = await client.PostAsJsonAsync("/api/auth/sign-in", authRequest);
         signInResponse.EnsureSuccessStatusCode();
@@ -78,35 +65,14 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
 
         // Act
         var validateTokenResponse = await client.PostAsJsonAsync("/api/auth/validate-token", validateTokenRequest);
-
-        _testOutputHelper.WriteLine(await validateTokenResponse.Content.ReadAsStringAsync());
+        
         // Assert
         validateTokenResponse.EnsureSuccessStatusCode();
         var userInfo = await validateTokenResponse.Content.ReadFromJsonAsync<UserInfo>();
 
         Assert.NotNull(userInfo);
         
-        _mockAuthService.Verify(service => service.ValidateToken(validateTokenRequest.Token), Times.Once);
-    }
-    
-    private string GenerateValidJwtToken(string secretKey, int id, string email, Role role = Role.User)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(secretKey);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity([
-                new Claim(ClaimTypes.NameIdentifier, id.ToString()),
-                new Claim(ClaimTypes.Name, email),
-                new Claim(ClaimTypes.Role, role.ToString())
-            ]),
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        factory.MockAuthService.Verify(service => service.ValidateToken(validateTokenRequest.Token), Times.Once);
     }
 
     [Fact]
@@ -115,13 +81,11 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         // Arrange
         var token = "invalid-token";
 
-        _mockAuthService.Setup(service => service.ValidateToken(token))
+        factory.MockAuthService.Setup(service => service.ValidateToken(token))
             .Returns(false);
 
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services => { services.AddSingleton(_mockAuthService.Object); });
-        }).CreateClient();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var request = new TokenValidationRequest { Token = token };
 
@@ -131,22 +95,20 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
 
-        _mockAuthService.Verify(service => service.ValidateToken(token), Times.Once);
+        factory.MockAuthService.Verify(service => service.ValidateToken(token), Times.Never);
     }
 
     [Fact]
     public async Task ValidateToken_ExceptionDuringValidation_ReturnsUnauthorized()
     {
         // Arrange
-        var token = "error-token";
+        var token = JwtHelper.GenerateJwtToken(TestSecretKey, 1, "someEmail@test.com");
 
-        _mockAuthService.Setup(service => service.ValidateToken(token))
+        factory.MockAuthService.Setup(service => service.ValidateToken(token))
             .Returns(false);
 
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services => { services.AddSingleton(_mockAuthService.Object); });
-        }).CreateClient();
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var request = new TokenValidationRequest { Token = token };
 
@@ -156,6 +118,11 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
 
-        _mockAuthService.Verify(service => service.ValidateToken(token), Times.Once);
+        factory.MockAuthService.Verify(service => service.ValidateToken(It.IsAny<string>()), Times.Once);
+    }
+
+    public void Dispose()
+    {
+        factory.ResetMocks();
     }
 }

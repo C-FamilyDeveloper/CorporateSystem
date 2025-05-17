@@ -26,7 +26,6 @@ internal class UserService(
     IContextFactory contextFactory,
     IPasswordHasher passwordHasher,
     IRegistrationCodesRepository registrationCodesRepository,
-    IUserRepository userRepository,
     GrpcNotificationClient grpcNotificationClient,
     IOptions<JwtToken> jwtTokenOptions,
     IOptions<NotificationOptions> notificationOptions,
@@ -109,7 +108,10 @@ internal class UserService(
             throw new InvalidRegistrationException("Пароли не совпадают");
         }
 
-        var existingUser = await userRepository.GetUserByEmailAsync(dto.Email, cancellationToken);
+        var existingUser = await contextFactory.ExecuteWithoutCommitAsync(
+            async context => 
+                await context.Users.FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken),
+            cancellationToken: cancellationToken);
 
         if (existingUser is not null)
         {
@@ -160,21 +162,27 @@ internal class UserService(
     {
         dto.ShouldBeValid(logger);
 
-        if (await registrationCodesRepository.GetAsync([dto.Email], cancellationToken) is null)
+        var code = await registrationCodesRepository.GetAsync([dto.Email], cancellationToken);
+        
+        if (code is null || code != dto.SuccessCode)
         {
             throw new InvalidRegistrationException("Неверный код");
         }
-
+        
         await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
         
-        var addUserDto = new AddUserDto
+        await contextFactory.ExecuteWithCommitAsync(async context =>
         {
-            Email = dto.Email,
-            Password = passwordHasher.HashPassword(dto.Password),
-            Role = Role.User
-        };
-
-        await userRepository.AddUserAsync(addUserDto, cancellationToken);
+            await context.Users.AddAsync(new User
+            {
+                Email = dto.Email,
+                Password = passwordHasher.HashPassword(dto.Password),
+                Role = Role.User,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Gender = dto.Gender
+            }, cancellationToken);
+        }, cancellationToken: cancellationToken);
     }
 
     public Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default)

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using CorporateSystem.ApiGateway.Services.Services.Interfaces;
+using Microsoft.Extensions.Primitives;
 
 namespace CorporateSystem.ApiGateway.Api.Middlewares;
 
@@ -32,6 +33,7 @@ public class AuthenticationMiddleware
                 {
                     var userInfo = await authService.GetUserInfoAsyncByToken(token, context.RequestAborted);
                     context.Request.Headers["X-User-Info"] = JsonSerializer.Serialize(userInfo);
+                    context.Request.Headers["Authorization"] = $"Bearer {token}";
                     logger.LogInformation($"{nameof(InvokeAsync)}: UserInfo={userInfo}");
                 }
                 else
