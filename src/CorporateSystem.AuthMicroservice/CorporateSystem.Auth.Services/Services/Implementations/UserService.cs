@@ -26,7 +26,6 @@ internal class UserService(
     IContextFactory contextFactory,
     IPasswordHasher passwordHasher,
     IRegistrationCodesRepository registrationCodesRepository,
-    IUserRepository userRepository,
     GrpcNotificationClient grpcNotificationClient,
     IOptions<JwtToken> jwtTokenOptions,
     IOptions<NotificationOptions> notificationOptions,
@@ -109,7 +108,10 @@ internal class UserService(
             throw new InvalidRegistrationException("Пароли не совпадают");
         }
 
-        var existingUser = await userRepository.GetUserByEmailAsync(dto.Email, cancellationToken);
+        var existingUser = await contextFactory.ExecuteWithoutCommitAsync(
+            async context => 
+                await context.Users.FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken),
+            cancellationToken: cancellationToken);
 
         if (existingUser is not null)
         {
