@@ -23,6 +23,7 @@ public class DocumentServiceTests
     private readonly Mock<IDocumentUserRepository> _mockDocumentUserRepository;
     private readonly Mock<IAuthApiService> _mockAuthApiService;
     private readonly Mock<IDocumentCompositeRepository> _mockDocumentCompositeRepository;
+    private readonly Mock<IDocumentChangeLogService> _mockDocumentChangeLogService;
     private readonly DocumentService _documentService;
 
     public DocumentServiceTests()
@@ -32,13 +33,15 @@ public class DocumentServiceTests
         _mockDocumentUserRepository = new Mock<IDocumentUserRepository>();
         _mockAuthApiService = new Mock<IAuthApiService>();
         _mockDocumentCompositeRepository = new Mock<IDocumentCompositeRepository>();
+        _mockDocumentChangeLogService = new Mock<IDocumentChangeLogService>();
         
         _documentService = new DocumentService(
             _mockLogger.Object,
             _mockDocumentRepository.Object,
             _mockDocumentUserRepository.Object,
             _mockAuthApiService.Object,
-            _mockDocumentCompositeRepository.Object);
+            _mockDocumentCompositeRepository.Object,
+            _mockDocumentChangeLogService.Object);
     }
     
     [Fact]
@@ -190,6 +193,9 @@ public class DocumentServiceTests
             It.Is<UpdateDocumentDto>(updateDto =>
                 updateDto.Content == dto.NewContent),
             It.IsAny<CancellationToken>()), Times.Once);
+        
+        _mockDocumentChangeLogService.Verify(service => 
+            service.AddChangeLogAsync(It.IsAny<ChangeLog>(), It.IsAny<CancellationToken>()), Times.Once);
     }
     
     [Fact]
