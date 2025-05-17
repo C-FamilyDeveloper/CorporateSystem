@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using AutoFixture.Xunit2;
+using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
@@ -10,6 +11,7 @@ using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Implementations;
 using CorporateSystem.Auth.Services.Services.Interfaces;
+using CorporateSystem.Auth.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -27,7 +29,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
         // Act
         using var testFixture = new TestFixture();
         var registrationCodesRepositoryMock = new Mock<IRegistrationCodesRepository>();
-
+    
         var email = "test@bobr.ru";
         var password = "password";
         
@@ -40,14 +42,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IContextFactory>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
-            testFixture.GetService<IUserRepository>(),
             null,
             testFixture.GetService<IOptions<JwtToken>>(),
             new OptionsWrapper<NotificationOptions>(null),
             null);
         
         // Arrange
-        var request = new SuccessRegisterUserDto(email, password, successCode);
+        var request = new SuccessRegisterUserDto(email, password, successCode, string.Empty, string.Empty, Gender.Female);
         
         await userService.SuccessRegisterAsync(request);
         
@@ -58,14 +59,14 @@ public class UserServiceTests : IClassFixture<TestFixture>
         Assert.Single(dataContext.Users);
         Assert.Equal(email, dataContext.Users.Single().Email);
     }
-
+    
     [Theory, AutoData]
     public async Task SuccessRegisterAsync_ValidInput_InvalidSuccessCode_ShouldThrowExceptionWithStatusCode(int successCode)
     {
         // Act
         using var testFixture = new TestFixture();
         var registrationCodesRepositoryMock = new Mock<IRegistrationCodesRepository>();
-
+    
         registrationCodesRepositoryMock
             .Setup(x =>
                 x.GetAsync(It.IsAny<object[]>(),
@@ -76,7 +77,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IContextFactory>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
-            testFixture.GetService<IUserRepository>(),
             null,
             testFixture.GetService<IOptions<JwtToken>>(),
             new OptionsWrapper<NotificationOptions>(null),
@@ -85,15 +85,15 @@ public class UserServiceTests : IClassFixture<TestFixture>
         var email = "test@bobr.ru";
         var password = "password";
         
-        var request = new SuccessRegisterUserDto(email, password, successCode);
+        var request = new SuccessRegisterUserDto(email, password, successCode, string.Empty, string.Empty, Gender.Female);
         // Assert
-
+    
         await Assert.ThrowsAsync<InvalidRegistrationException>(async () =>
         {
             await userService.SuccessRegisterAsync(request);
         });
     }
-
+    
     [Fact]
     public async Task AuthenticateAsync_ValidEmailAndPassword_UserExists_ShouldReturnJwtToken()
     {
@@ -101,54 +101,58 @@ public class UserServiceTests : IClassFixture<TestFixture>
         using var testFixture = new TestFixture();
         var email = "test@bobr.ru";
         var password = "password";
+    
+        var dataContext = testFixture.GetService<DataContext>();
+        dataContext.Users.Add(new User
+        {
+            Email = email,
+            Password = testFixture.GetService<IPasswordHasher>().HashPassword(password),
+            FirstName = string.Empty,
+            LastName = string.Empty
+        });
 
-        var addUserDto = new AddUserDto(
-            email,
-            testFixture.GetService<IPasswordHasher>().HashPassword(password),
-            Role.User);
-        
-        await testFixture.GetService<IUserRepository>().AddUserAsync(addUserDto);
-
+        await dataContext.SaveChangesAsync();
+    
         // Arrange
         var userService = new UserService(
             testFixture.GetService<IContextFactory>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
-            testFixture.GetService<IUserRepository>(),
             null,
             testFixture.GetService<IOptions<JwtToken>>(), 
             new OptionsWrapper<NotificationOptions>(null),
             null);
-
+    
         var jwtToken = await userService.AuthenticateAsync(new AuthUserDto(email, password));
         
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(jwtToken));
     }
-
+    
     [Fact]
     public async Task AuthenticateAsync_InvalidPassword_UserExists_ShouldThrowExceptionWithStatusCodeUnauthorized()
     {
         // Act
         using var testFixture = new TestFixture();
-
+    
         var email = "test@bobr.ru";
         var password = "password1";
         var invalidPassword = "password2";
         
-        var addUserDto = new AddUserDto(
-            email,
-            testFixture.GetService<IPasswordHasher>().HashPassword(password),
-            Role.User);
-        
-        await testFixture.GetService<IUserRepository>().AddUserAsync(addUserDto);
-
+        var dataContext = testFixture.GetService<DataContext>();
+        dataContext.Users.Add(new User
+        {
+            Email = email,
+            Password = testFixture.GetService<IPasswordHasher>().HashPassword(password),
+            FirstName = string.Empty,
+            LastName = string.Empty
+        });
+    
         // Arrange
         var userService = new UserService(
             testFixture.GetService<IContextFactory>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
-            testFixture.GetService<IUserRepository>(),
             null,
             new OptionsWrapper<JwtToken>(null),
             new OptionsWrapper<NotificationOptions>(null),
@@ -158,7 +162,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
         await Assert.ThrowsAsync<InvalidAuthorizationException>(async () =>
         {
             var authUserDtoWithInvalidPassword = new AuthUserDto(email, invalidPassword);
-
+    
             await userService.AuthenticateAsync(authUserDtoWithInvalidPassword);
         });
     }
@@ -177,7 +181,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IContextFactory>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
-            testFixture.GetService<IUserRepository>(),
             null,
             new OptionsWrapper<JwtToken>(null),
             new OptionsWrapper<NotificationOptions>(null),
@@ -196,7 +199,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     public void ValidateToken_ValidToken_ReturnsTrue()
     {
         // Arrange
-        var validToken = GenerateJwtToken(_testSecretKey, 1, string.Empty);
+        var validToken = JwtHelper.GenerateJwtToken(_testSecretKey, 1, string.Empty);
         
         var jwtToken = new JwtToken { JwtSecret = _testSecretKey };
         var authService = new UserService(
@@ -204,7 +207,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null, 
             null, 
-            null,
             new OptionsWrapper<JwtToken>(jwtToken),
             new OptionsWrapper<NotificationOptions>(null),
             null);
@@ -228,7 +230,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null, 
             null, 
-            null,
             new OptionsWrapper<JwtToken>(jwtToken),
             new OptionsWrapper<NotificationOptions>(null),
             null);
@@ -244,7 +245,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     public async Task ValidateToken_ExpiredToken_ReturnsFalse()
     {
         // Arrange
-        var expiredToken = GenerateJwtToken(_testSecretKey, 1, string.Empty, expires: DateTime.UtcNow.AddSeconds(2));
+        var expiredToken = JwtHelper.GenerateJwtToken(_testSecretKey, 1, string.Empty, expires: DateTime.UtcNow.AddSeconds(2));
 
         await Task.Delay(TimeSpan.FromSeconds(5));
         
@@ -254,7 +255,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null, 
             null, 
-            null,
             new OptionsWrapper<JwtToken>(jwtToken),
             new OptionsWrapper<NotificationOptions>(new NotificationOptions
             {
@@ -280,7 +280,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null, 
             null,
             null, 
-            null, 
             null,
             new OptionsWrapper<JwtToken>(jwtToken),
             new OptionsWrapper<NotificationOptions>(null),
@@ -291,25 +290,5 @@ public class UserServiceTests : IClassFixture<TestFixture>
 
         // Assert
         Assert.False(result);
-    }
-    
-    private string GenerateJwtToken(string secretKey, int id, string email, Role role = Role.User, DateTime? expires = null)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(secretKey);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity([
-                new Claim(ClaimTypes.NameIdentifier, id.ToString()),
-                new Claim(ClaimTypes.Name, email),
-                new Claim(ClaimTypes.Role, role.ToString())
-            ]),
-            Expires = expires ?? DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
     }
 }
