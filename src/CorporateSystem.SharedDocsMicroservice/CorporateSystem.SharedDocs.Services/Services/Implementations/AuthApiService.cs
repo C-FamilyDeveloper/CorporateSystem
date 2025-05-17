@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Options;
@@ -26,7 +27,10 @@ internal class AuthApiService : IAuthApiService
         _httpClient.BaseAddress = new Uri(authMicroserviceOptions.Host);
     }
     
-    public async Task<string[]> GetUserEmailsByIdsAsync(int[] ids, CancellationToken cancellationToken = default)
+    public async Task<string[]> GetUserEmailsByIdsAsync(
+        int[] ids,
+        string? jwtToken =null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
             
@@ -41,6 +45,11 @@ internal class AuthApiService : IAuthApiService
             RequestUri = new Uri(_httpClient.BaseAddress!, "/api/auth/get-user-emails-by-id"),
             Method = HttpMethod.Post
         };
+
+        if (jwtToken is not null)
+        {
+            httpMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
+        }
 
         var response = await _httpClient.SendAsync(httpMessage, cancellationToken);
         _logger.LogInformation($"{nameof(GetUserEmailsByIdsAsync)}: Response status code: {response.StatusCode}");

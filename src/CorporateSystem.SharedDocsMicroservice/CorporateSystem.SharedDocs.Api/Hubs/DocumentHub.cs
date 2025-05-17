@@ -1,5 +1,5 @@
 ﻿using CorporateSystem.SharedDocs.Api.Requests;
-using CorporateSystem.SharedDocs.Domain.Enums;
+using CorporateSystem.SharedDocs.Api.Responses;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Exceptions;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
@@ -11,7 +11,8 @@ namespace CorporateSystem.SharedDocs.Api.Hubs;
 public class DocumentHub(
     IDocumentService documentService,
     ILogger<DocumentHub> logger,
-    IHttpContextAccessor httpContextAccessor) : Hub
+    IHttpContextAccessor httpContextAccessor,
+    IDocumentChangeLogService documentChangeLogService) : Hub
 {
     public override async Task OnConnectedAsync()
     {
@@ -22,31 +23,38 @@ public class DocumentHub(
             logger.LogError($"{nameof(OnConnectedAsync)}: UserInfo is missing");
             throw new ArgumentException("Отсутствует информация о пользователе");
         }
+
+        if (httpContext?.Items["Authorization"] is not string token)
+        {
+            logger.LogError($"{nameof(OnConnectedAsync)}: ['Authorization']={httpContext?.Items["Authorization"]}");
+            throw new ArgumentException("Отсутствует токен");
+        }
         
         Context.Items["X-User-Info"] = userInfo;
+        Context.Items["Authorization"] = token;
 
         await base.OnConnectedAsync();
         logger.LogInformation($"Connection for connectionId={Context.ConnectionId} completed");
     }
     
-    public async Task JoinDocumentGroup(JoinDocumentGroupRequest request)
+    public async Task<JoinDocumentGroupResponse> JoinDocumentGroup(JoinDocumentGroupRequest request)
     {
         var userInfo = GetUserInfoOrThrowException();
-        var existingUser =
-            await documentService.GetDocumentUsersAsync(new GetDocumentUsersDto(request.DocumentId, [userInfo.Id]),
-                Context.ConnectionAborted);
+        
+        await ThrowIfUserDontHavePermissionsToEditCurrentDocument(request.DocumentId, userInfo.Id, Context.ConnectionAborted);
         
         var document = await documentService.GetDocumentAsync(request.DocumentId);
         
-        if (!existingUser.Any())
-        {
-            logger.LogError($"{nameof(JoinDocumentGroup)}: User with ID {userInfo.Id} not found in document {request.DocumentId}");
-            throw new InsufficientPermissionsException("У вас нет доступа к данному файлу");
-        }
-        
         await Groups.AddToGroupAsync(Context.ConnectionId, request.DocumentId.ToString());
-        
         await Clients.Caller.SendAsync("ReceiveDocumentContent", document.Content);
+
+        var logs = await GetChangeLogsForDocumentAsync(request.DocumentId, Context.ConnectionAborted);
+        
+        return new JoinDocumentGroupResponse
+        {
+            Content = document.Content,
+            ChangeLogs = logs
+        };
     }
     
     public async Task SendDocumentUpdate(SendDocumentUpdateRequest request)
@@ -58,33 +66,22 @@ public class DocumentHub(
         }
 
         var userInfo = GetUserInfoOrThrowException();
-        
-        var existingUser = await documentService.GetDocumentUsersAsync(
-            new GetDocumentUsersDto(request.DocumentId, [userInfo.Id]),
-            Context.ConnectionAborted);
 
-        var existingUserArray = existingUser.ToArray();
-        
-        if (!existingUserArray.Any())
-        {
-            logger.LogError($"{nameof(SendDocumentUpdate)}: User with ID {userInfo.Id} not found in document {request.DocumentId}");
-            throw new InsufficientPermissionsException("У вас нет доступа к данному файлу");
-        }
-
-        var currentUser = existingUserArray.Single();
-        if (currentUser.AccessLevel != AccessLevel.Writer)
-        {
-            logger.LogError($"{nameof(SendDocumentUpdate)}: User with ID {userInfo.Id} does not have Writer access to document {request.DocumentId}");
-            throw new InsufficientPermissionsException("У вас нет прав на редактирование данного файла");
-        }
+        await ThrowIfUserDontHavePermissionsToEditCurrentDocument(request.DocumentId, userInfo.Id, Context.ConnectionAborted);
         
         await documentService.UpdateDocumentContentAsync(new UpdateDocumentContentDto
         {
             DocumentId = request.DocumentId,
             UserId = userInfo.Id,
-            NewContent = request.NewContent
+            NewContent = request.NewContent,
+            Line = request.Line
         }, Context.ConnectionAborted);
+
+        var logResponses = await GetChangeLogsForDocumentAsync(
+            request.DocumentId,
+            Context.ConnectionAborted);
         
+        await Clients.Group(request.DocumentId.ToString()).SendAsync("ReceiveChangeLogs", logResponses);
         await Clients.Group(request.DocumentId.ToString()).SendAsync("ReceiveDocumentUpdate", request.NewContent); 
     }
 
@@ -97,5 +94,50 @@ public class DocumentHub(
         
         logger.LogError($"{nameof(GetUserInfoOrThrowException)}: UserInfo is missing");
         throw new ArgumentException("Отсутствует информация о пользователе");
+    }
+
+    private async Task<ChangeLogResponse[]> GetChangeLogsForDocumentAsync(
+        int documentId,
+        CancellationToken cancellationToken)
+    {
+        var token = Context.Items["Authorization"].ToString();
+        if (string.IsNullOrEmpty(token))
+        {
+            logger.LogError($"{nameof(SendDocumentUpdate)}: Authorization token is missing");
+            throw new UnauthorizedAccessException("Токен аутентификации отсутствует");
+        }
+        
+        var logs = await documentChangeLogService
+            .GetChangeLogsAsync(documentId, token, cancellationToken);
+        
+        var logResponses = logs.Select(log => new ChangeLogResponse
+        {
+            Id = log.Id,
+            DocumentId = log.DocumentId,
+            UserEmail = log.UserEmail,
+            Changes = log.Changes,
+            ChangedAt = log.ChangedAt
+        }).ToArray();
+
+        return logResponses;
+    }
+
+    private async Task ThrowIfUserDontHavePermissionsToEditCurrentDocument(
+        int documentId,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        // todo: можно подумать о кэшировании
+        var users = await documentService.GetDocumentUsersAsync(
+            new GetDocumentUsersDto(documentId, [userId]),
+            cancellationToken);
+
+        var usersArray = users.ToArray();
+        
+        if (!usersArray.Any())
+        {
+            logger.LogError($"{nameof(ThrowIfUserDontHavePermissionsToEditCurrentDocument)}: User with ID {userId} not found in document {documentId}");
+            throw new InsufficientPermissionsException("У вас нет доступа к данному файлу");
+        }
     }
 }

@@ -7,8 +7,5 @@ public class DocumentChangeLog
     public int DocumentId { get; init; }
     public DateTimeOffset ChangedAt { get; init; }
     public required string Changes { get; init; }
-    public int StartLine { get; set; }
-    public int StartColumn { get; set; }
-    public int EndLine { get; set; }
-    public int EndColumn { get; set; }
+    public int Line { get; init; }
 }

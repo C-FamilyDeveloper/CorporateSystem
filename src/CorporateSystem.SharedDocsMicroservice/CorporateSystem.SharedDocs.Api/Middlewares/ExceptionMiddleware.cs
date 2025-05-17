@@ -34,6 +34,10 @@ public class ExceptionMiddleware
         var message = "Что-то пошло не так";
         switch (e)
         {
+            case UnauthorizedAccessException exception:
+                code = HttpStatusCode.Forbidden;
+                message = JsonSerializer.Serialize(exception.Message);
+                break;
             case InsufficientPermissionsException exception:
                 code = HttpStatusCode.Forbidden;
                 message = JsonSerializer.Serialize(exception.Message);

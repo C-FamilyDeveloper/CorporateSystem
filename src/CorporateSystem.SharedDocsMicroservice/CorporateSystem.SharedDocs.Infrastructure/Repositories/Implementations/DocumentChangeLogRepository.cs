@@ -12,7 +12,7 @@ namespace CorporateSystem.SharedDocs.Infrastructure.Repositories.Implementations
 internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options) 
     : PostgreRepository(options.Value), IDocumentChangeLogRepository
 {
-    protected override string TableName { get; } = "document_changed_logs";
+    protected override string TableName { get; } = "document_change_logs";
     
     public async Task<IEnumerable<DocumentChangeLog>> GetAsync(
         DocumentChangeLogFilter? filter = null,
@@ -24,6 +24,7 @@ internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options)
                  , document_id as DocumentId
                  , changed_at as ChangedAt
                  , changes as Changes
+                 , line as Line
               from {TableName}";
         
         var @params = GetDynamicParametersForFilter(filter, out var conditions);
@@ -48,21 +49,12 @@ internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options)
         return result;
     }
 
-    public async Task<int[]> CreateAsync(CreateDocumentChangeLog[] dtos, CancellationToken cancellationToken = default)
+    public async Task<int[]> CreateAsync(CreateDocumentChangeLogDto[] dtos, CancellationToken cancellationToken = default)
     {
         var sqlQuery = @$"
-            insert into {TableName} (document_id, user_id, changed_at, changes, start_line, start_column, end_line, end_column)
-            select UNNEST(@DocumentIds), UNNEST(@UserIds), @ChangedAt, UNNEST(@Changes), UNNEST(@StartLines), UNNEST(@StartColumns), UNNEST(@EndLines), UNNEST(@EndColumns)
+            insert into {TableName} (document_id, user_id, changed_at, changes, line)
+            select UNNEST(@DocumentIds), UNNEST(@UserIds), @ChangedAt, UNNEST(@Changes), UNNEST(@Lines)
          returning id";
-
-        var endLines = new int[dtos.Length];
-        var endColumns = new int[dtos.Length];
-        
-        for (var i = 0; i < dtos.Length; i++)
-        {
-            endLines[i] = dtos[i].Changes.Length + dtos[i].Changes.Count(letter => letter == '\n');
-            endColumns[i] = dtos[i].Changes.Split('\n').Last().Length;
-        }
         
         var command = new CommandDefinition(
             sqlQuery, new
@@ -71,10 +63,7 @@ internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options)
                 UserIds = dtos.Select(dto => dto.UserId).ToArray(),
                 Changes = dtos.Select(dto => dto.Changes).ToArray(),
                 ChangedAt = DateTimeOffset.UtcNow,
-                StartLines = dtos.Select(dto => dto.StartLine).ToArray(),
-                StartColumns = dtos.Select(dto => dto.StartColumn).ToArray(),
-                EndLines = endLines,
-                EndColumns = endColumns
+                Lines = dtos.Select(dto => dto.Line).ToArray()
             },
             commandTimeout: DefaultTimeoutInSeconds,
             cancellationToken: cancellationToken);
@@ -86,6 +75,30 @@ internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options)
         transaction.Complete();
         
         return ids.ToArray();
+    }
+
+    public async Task UpdateAsync(int id, UpdateDocumentChangeLogDto dto, CancellationToken cancellationToken = default)
+    {
+        var sqlQuery = @$"
+            update {TableName}
+               set changes = @Changes
+             where id = @Id";
+        
+        var command = new CommandDefinition(
+            sqlQuery,
+            new
+            {
+                Id = id,
+                Changes = dto.Changes
+            },
+            commandTimeout: DefaultTimeoutInSeconds,
+            cancellationToken: cancellationToken);
+        
+        using var transaction = CreateTransactionScope();
+        await using var connection = await GetAndOpenConnectionAsync(cancellationToken);
+        await connection.ExecuteAsync(command);
+        
+        transaction.Complete();
     }
 
     public async Task DeleteAsync(DocumentChangeLogFilter? filter = null, CancellationToken cancellationToken = default)

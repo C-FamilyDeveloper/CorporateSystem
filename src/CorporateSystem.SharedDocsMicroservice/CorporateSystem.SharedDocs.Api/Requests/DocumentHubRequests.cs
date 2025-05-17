@@ -17,6 +17,9 @@ public class SendDocumentUpdateRequest
     
     [JsonPropertyName("new_content")]
     public required string NewContent { get; init; }
+    
+    [JsonPropertyName("line")]
+    public int Line { get; init; }
 }
 
 public class UserInfo

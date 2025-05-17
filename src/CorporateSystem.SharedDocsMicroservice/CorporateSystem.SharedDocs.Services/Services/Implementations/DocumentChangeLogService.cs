@@ -7,15 +7,14 @@ using CorporateSystem.SharedDocs.Services.Services.Interfaces;
 
 namespace CorporateSystem.SharedDocs.Services.Services.Implementations;
 
-internal class DocumentChangeLogService(IDocumentChangeLogRepository documentChangeLogRepository) 
+internal class DocumentChangeLogService(
+    IDocumentChangeLogRepository documentChangeLogRepository,
+    IAuthApiService authApiService) 
     : IDocumentChangeLogService
 {
     public async Task AddChangeLogAsync(ChangeLog changeLog, CancellationToken cancellationToken = default)
     {
-        var documentLogs = await documentChangeLogRepository.GetAsync(new DocumentChangeLogFilter
-        {
-            DocumentIds = [changeLog.DocumentId]
-        }, cancellationToken);
+        var documentLogs = await GetDocumentChangeLogs(changeLog.DocumentId, cancellationToken);
 
         var documentLogsArray = documentLogs
             .OrderByDescending(documentLog => documentLog.ChangedAt)
@@ -31,7 +30,8 @@ internal class DocumentChangeLogService(IDocumentChangeLogRepository documentCha
 
             if (IsLogNeedChange(documentLog, changeLog))
             {
-            
+                await documentChangeLogRepository
+                    .UpdateAsync(documentLog.Id, new UpdateDocumentChangeLogDto(changeLog.Changes), cancellationToken);
             }
             else
             {
@@ -40,37 +40,75 @@ internal class DocumentChangeLogService(IDocumentChangeLogRepository documentCha
         }
     }
 
+    public async Task<DocumentChangeLogDto[]> GetChangeLogsAsync(
+        int documentId,
+        string token,
+        CancellationToken cancellationToken = default)
+    {
+        var documentLogs = await GetDocumentChangeLogs(documentId, cancellationToken);
+
+        // todo: запилить пагинацию
+        var documentLogsArray = documentLogs
+            .OrderByDescending(log => log.ChangedAt)
+            .Take(50)
+            .ToArray();
+
+        var result = new DocumentChangeLogDto[documentLogsArray.Length];
+
+        for (var i = 0; i < documentLogsArray.Length; i++)
+        {
+            var documentLog = documentLogsArray[i];
+            var authResponse = await authApiService.GetUserEmailsByIdsAsync(
+                [documentLog.UserId],
+                token,
+                cancellationToken);
+            
+            var userEmail = authResponse.Single();
+
+            result[i] = new DocumentChangeLogDto
+            {
+                Changes = documentLog.Changes,
+                DocumentId = documentLog.DocumentId,
+                Id = documentLog.Id,
+                UserEmail = userEmail,
+                ChangedAt = documentLog.ChangedAt
+            };
+        }
+
+        return result;
+    }
+
     private bool IsLogNeedChange(DocumentChangeLog documentChangeLog, ChangeLog changeLog)
     {
-        if (documentChangeLog.UserId != changeLog.UserId)
+        if (documentChangeLog.UserId != changeLog.UserId || 
+            documentChangeLog.Line != changeLog.Line)
         {
             return false;
         }
 
-        var linesDifferent = documentChangeLog.StartLine - changeLog.StartLine;
-        
-        if (Math.Abs(linesDifferent) > 1)
-        {
-            return false;
-        }
-
-        if (linesDifferent == 0)
-        {
-            
-        }
+        return true;
     }
 
     private Task CreateChangeLogAsync(ChangeLog changeLog, CancellationToken cancellationToken)
     {
         return documentChangeLogRepository.CreateAsync([
-            new CreateDocumentChangeLog
+            new CreateDocumentChangeLogDto
             {
                 DocumentId = changeLog.DocumentId,
-                StartLine = changeLog.StartLine,
+                Line = changeLog.Line,
                 UserId = changeLog.UserId,
-                Changes = changeLog.Changes,
-                StartColumn = changeLog.StartColumn
+                Changes = changeLog.Changes
             }
         ], cancellationToken);
+    }
+
+    private Task<IEnumerable<DocumentChangeLog>> GetDocumentChangeLogs(
+        int documentId,
+        CancellationToken cancellationToken)
+    {
+        return documentChangeLogRepository.GetAsync(new DocumentChangeLogFilter
+        {
+            DocumentIds = [documentId]
+        }, cancellationToken);
     }
 }

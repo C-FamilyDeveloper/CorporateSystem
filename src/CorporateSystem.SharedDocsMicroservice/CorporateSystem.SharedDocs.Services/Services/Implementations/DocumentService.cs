@@ -16,7 +16,8 @@ internal class DocumentService(
     IDocumentRepository documentRepository,
     IDocumentUserRepository documentUserRepository,
     IAuthApiService authApiService,
-    IDocumentCompositeRepository documentCompositeRepository) : IDocumentService
+    IDocumentCompositeRepository documentCompositeRepository,
+    IDocumentChangeLogService documentChangeLogService) : IDocumentService
 {
     public async Task<Document> GetDocumentAsync(int documentId, CancellationToken cancellationToken = default)
     {
@@ -117,7 +118,7 @@ internal class DocumentService(
             .Select(user => user.UserId)
             .ToArray();
 
-        var userEmails = await authApiService.GetUserEmailsByIdsAsync(usersIds, cancellationToken);
+        var userEmails = await authApiService.GetUserEmailsByIdsAsync(usersIds, cancellationToken: cancellationToken);
 
         return userEmails.Select(email => new UserInfo(email));
     }
@@ -147,6 +148,14 @@ internal class DocumentService(
             document.Id,
             new UpdateDocumentDto(document.Title, dto.NewContent),
             cancellationToken);
+        
+        await documentChangeLogService.AddChangeLogAsync(new ChangeLog
+        {
+            DocumentId = document.Id,
+            UserId = dto.UserId,
+            Changes = dto.NewContent,
+            Line = dto.Line
+        }, cancellationToken);
     }
 
     public Task DeleteUsersFromCurrentDocumentAsync(

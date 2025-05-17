@@ -1,8 +1,9 @@
 ﻿namespace CorporateSystem.SharedDocs.Infrastructure.Dtos;
 
-public record struct CreateDocumentChangeLog(
+public record struct CreateDocumentChangeLogDto(
     int UserId,
     int DocumentId, 
     string Changes,
-    int StartLine,
-    int StartColumn);
+    int Line);
+    
+public record struct UpdateDocumentChangeLogDto(string Changes);
