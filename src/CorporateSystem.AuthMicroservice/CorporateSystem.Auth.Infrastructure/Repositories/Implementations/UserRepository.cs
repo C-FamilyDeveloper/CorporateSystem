@@ -20,20 +20,4 @@ internal class UserRepository(IContextFactory contextFactory, ILogger<UserReposi
             async context => await context.Users.FirstOrDefaultAsync(user => user.Email == email, cancellationToken),
             cancellationToken: cancellationToken);
     }
-
-    public async Task AddUserAsync(AddUserDto dto, CancellationToken cancellationToken)
-    {
-        dto.ShouldBeValid(logger);
-        
-        await contextFactory.ExecuteWithCommitAsync(
-            async context =>
-                await context.Users.AddAsync(
-                    new User
-                    {
-                        Email = dto.Email,
-                        Password = dto.Password,
-                        Role = dto.Role
-                    }, cancellationToken),
-            cancellationToken: cancellationToken);
-    }
 }
