@@ -24,6 +24,7 @@ public class DocumentServiceTests
     private readonly Mock<IAuthApiService> _mockAuthApiService;
     private readonly Mock<IDocumentCompositeRepository> _mockDocumentCompositeRepository;
     private readonly Mock<IDocumentChangeLogService> _mockDocumentChangeLogService;
+    private readonly Mock<IBanWordsService> _mockBanWordsService;
     private readonly DocumentService _documentService;
 
     public DocumentServiceTests()
@@ -34,6 +35,7 @@ public class DocumentServiceTests
         _mockAuthApiService = new Mock<IAuthApiService>();
         _mockDocumentCompositeRepository = new Mock<IDocumentCompositeRepository>();
         _mockDocumentChangeLogService = new Mock<IDocumentChangeLogService>();
+        _mockBanWordsService = new Mock<IBanWordsService>();
         
         _documentService = new DocumentService(
             _mockLogger.Object,
@@ -41,7 +43,8 @@ public class DocumentServiceTests
             _mockDocumentUserRepository.Object,
             _mockAuthApiService.Object,
             _mockDocumentCompositeRepository.Object,
-            _mockDocumentChangeLogService.Object);
+            _mockDocumentChangeLogService.Object,
+            _mockBanWordsService.Object);
     }
     
     [Fact]

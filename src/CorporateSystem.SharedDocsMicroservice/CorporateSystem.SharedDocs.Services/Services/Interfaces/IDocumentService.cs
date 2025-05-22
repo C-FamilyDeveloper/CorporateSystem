@@ -13,7 +13,7 @@ public interface IDocumentService
     Task<IEnumerable<DocumentUser>> GetDocumentUsersAsync(GetDocumentUsersDto dto, CancellationToken cancellationToken = default);
     Task<IEnumerable<DocumentInfo>> GetCurrentUserDocuments(int userId, CancellationToken cancellationToken = default);
     Task<IEnumerable<UserInfo>> GetUsersOfCurrentDocument(int documentId, CancellationToken cancellationToken = default);
-    Task UpdateDocumentContentAsync(UpdateDocumentContentDto dto, CancellationToken cancellationToken = default);
+    Task<string> UpdateDocumentContentAsync(UpdateDocumentContentDto dto, CancellationToken cancellationToken = default);
     Task DeleteUsersFromCurrentDocumentAsync(DeleteUserFromDocumentDto dto, CancellationToken cancellationToken = default);
     Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default);
 }

@@ -17,7 +17,8 @@ internal class DocumentService(
     IDocumentUserRepository documentUserRepository,
     IAuthApiService authApiService,
     IDocumentCompositeRepository documentCompositeRepository,
-    IDocumentChangeLogService documentChangeLogService) : IDocumentService
+    IDocumentChangeLogService documentChangeLogService,
+    IBanWordsService banWordsService) : IDocumentService
 {
     public async Task<Document> GetDocumentAsync(int documentId, CancellationToken cancellationToken = default)
     {
@@ -123,7 +124,7 @@ internal class DocumentService(
         return userEmails.Select(email => new UserInfo(email));
     }
 
-    public async Task UpdateDocumentContentAsync(
+    public async Task<string> UpdateDocumentContentAsync(
         UpdateDocumentContentDto dto,
         CancellationToken cancellationToken = default)
     {
@@ -144,18 +145,22 @@ internal class DocumentService(
             throw new InsufficientPermissionsException("У вас недостаточно прав для выполнения этой операции");
         }
 
+        var newContent = await banWordsService.ProcessTextAsync(dto.NewContent, cancellationToken);
+        
         await documentRepository.UpdateAsync(
             document.Id,
-            new UpdateDocumentDto(document.Title, dto.NewContent),
+            new UpdateDocumentDto(document.Title, newContent),
             cancellationToken);
         
         await documentChangeLogService.AddChangeLogAsync(new ChangeLog
         {
             DocumentId = document.Id,
             UserId = dto.UserId,
-            Changes = dto.NewContent,
+            Changes = newContent,
             Line = dto.Line
         }, cancellationToken);
+
+        return newContent;
     }
 
     public Task DeleteUsersFromCurrentDocumentAsync(
