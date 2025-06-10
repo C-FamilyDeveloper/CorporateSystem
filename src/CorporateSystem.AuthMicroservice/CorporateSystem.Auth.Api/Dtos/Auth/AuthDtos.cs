@@ -96,9 +96,3 @@ public class UserInfo
     [JsonPropertyName("role")]
     public required string Role { get; init; }
 }
-
-public class RefreshTokenRequest
-{
-    [JsonPropertyName("refresh_token")]
-    public required string RefreshToken { get; init; }
-}

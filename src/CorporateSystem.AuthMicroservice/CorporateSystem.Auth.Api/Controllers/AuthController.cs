@@ -5,7 +5,6 @@ using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RefreshTokenRequest = CorporateSystem.Auth.Api.Dtos.Auth.RefreshTokenRequest;
 using RefreshTokenResponse = CorporateSystem.Auth.Api.Dtos.Auth.RefreshTokenResponse;
 
 namespace CorporateSystem.Auth.Api.Controllers;
@@ -95,16 +94,14 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken(
-        [FromBody] RefreshTokenRequest request,
-        [FromServices] ITokenService authService)
+    public async Task<IActionResult> RefreshToken([FromServices] ITokenService authService)
     {
         logger.LogInformation($"{nameof(RefreshToken)}: connectionId={HttpContext.Connection.Id}");
 
         var userId = GetUserInfoByToken(Request.Headers["Authorization"].ToString()).Id;
         
         var authResult = await authService.RefreshTokenAsync(
-            new Services.Services.Interfaces.RefreshTokenRequest(userId, request.RefreshToken));
+            new Services.Services.Interfaces.RefreshTokenRequest(userId, HttpContext.Connection.RemoteIpAddress?.ToString()!));
         
         return Ok(new RefreshTokenResponse
         {

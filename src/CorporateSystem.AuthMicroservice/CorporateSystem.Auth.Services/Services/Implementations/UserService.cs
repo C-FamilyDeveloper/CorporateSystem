@@ -82,12 +82,7 @@ internal class UserService(
 
     public async Task RegisterAsync(RegisterUserDto dto, CancellationToken cancellationToken = default)
     {
-        if (dto.Password != dto.RepeatedPassword)
-        {
-            logger.LogInformation(
-                $"{nameof(RegisterAsync)}: password={dto.Password}, repeated password={dto.RepeatedPassword}");
-            throw new InvalidRegistrationException("Пароли не совпадают");
-        }
+        dto.ShouldBeValid(logger);
 
         var existingUser = GetUserByEmailAsync(dto.Email, cancellationToken);
 
