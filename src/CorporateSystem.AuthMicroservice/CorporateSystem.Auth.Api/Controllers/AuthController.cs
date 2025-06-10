@@ -5,6 +5,8 @@ using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RefreshTokenRequest = CorporateSystem.Auth.Api.Dtos.Auth.RefreshTokenRequest;
+using RefreshTokenResponse = CorporateSystem.Auth.Api.Dtos.Auth.RefreshTokenResponse;
 
 namespace CorporateSystem.Auth.Api.Controllers;
 
@@ -21,12 +23,12 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
     {
         logger.LogInformation($"{nameof(SignIn)}: connectionId={HttpContext.Connection.Id}");
             
-        var token = await authService
-            .AuthenticateAsync(new AuthUserDto(request.Email, request.Password));
-            
+        var authResultDto = await authService
+            .AuthenticateAsync(new AuthUserDto(request.Email, request.Password, HttpContext.Connection.RemoteIpAddress?.ToString()!));
+        
         return Ok(new AuthResponse
         {
-            Token = token
+            Token = authResultDto.JwtToken
         });
     }
     
@@ -71,14 +73,15 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         return Ok();
     }
     
+    [AllowAnonymous]
     [HttpPost("validate-token")]
-    public IActionResult ValidateToken(
+    public async Task<IActionResult> ValidateToken(
         [FromBody]TokenValidationRequest request, 
-        [FromServices] IAuthService authService)
+        [FromServices] ITokenService tokenService)
     {
         logger.LogInformation($"{nameof(ValidateToken)}: connectionId={HttpContext.Connection.Id}");
             
-        var isValid = authService.ValidateToken(request.Token);
+        var isValid = await tokenService.ValidateTokenAsync(request.Token);
             
         if (!isValid)
         {
@@ -90,6 +93,25 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         return Ok(userInfo);
     }
 
+    [AllowAnonymous]
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken(
+        [FromBody] RefreshTokenRequest request,
+        [FromServices] ITokenService authService)
+    {
+        logger.LogInformation($"{nameof(RefreshToken)}: connectionId={HttpContext.Connection.Id}");
+
+        var userId = GetUserInfoByToken(Request.Headers["Authorization"].ToString()).Id;
+        
+        var authResult = await authService.RefreshTokenAsync(
+            new Services.Services.Interfaces.RefreshTokenRequest(userId, request.RefreshToken));
+        
+        return Ok(new RefreshTokenResponse
+        {
+            Token = authResult.Token
+        });
+    }
+    
     [HttpPost("get-user-emails-by-id")]
     public async Task<IActionResult> GetUserEmailsById(
         [FromBody] GetUserEmailsByIdsRequest request,

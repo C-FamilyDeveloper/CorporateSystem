@@ -39,6 +39,13 @@ public class ExceptionMiddleware
                 code = HttpStatusCode.Forbidden;
                 message = JsonSerializer.Serialize(exception.Message);
                 break;
+            case UserNotFoundException exception:
+                code = HttpStatusCode.NotFound;
+                message = JsonSerializer.Serialize(exception.Message);
+                break;
+            case RefreshTokenExpiredException exception:
+                code = HttpStatusCode.Forbidden;
+                break;
             case ArgumentOutOfRangeException exception:
                 code = HttpStatusCode.BadRequest;
                 message = JsonSerializer.Serialize(exception.Message);

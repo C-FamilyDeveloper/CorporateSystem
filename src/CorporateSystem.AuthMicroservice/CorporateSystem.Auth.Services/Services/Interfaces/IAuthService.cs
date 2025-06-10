@@ -2,8 +2,8 @@
 
 public interface IAuthService
 {
-    Task<string> AuthenticateAsync(AuthUserDto dto, CancellationToken cancellationToken = default);
-    bool ValidateToken(string token);
+    Task<AuthResultDto> AuthenticateAsync(AuthUserDto dto, CancellationToken cancellationToken = default);
 }
 
-public record struct AuthUserDto(string Email, string Password);
+public record struct AuthResultDto(string JwtToken);
+public record struct AuthUserDto(string Email, string Password, string UserIpAddress);

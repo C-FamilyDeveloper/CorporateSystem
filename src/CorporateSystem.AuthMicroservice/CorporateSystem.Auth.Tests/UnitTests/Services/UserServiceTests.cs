@@ -43,7 +43,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
-            testFixture.GetService<IOptions<JwtToken>>(),
+            testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
             null);
         
@@ -78,7 +78,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
-            testFixture.GetService<IOptions<JwtToken>>(),
+            testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
             new LoggerFactory().CreateLogger<UserService>());
         
@@ -119,14 +119,14 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
-            testFixture.GetService<IOptions<JwtToken>>(), 
+            testFixture.GetService<ITokenService>(), 
             new OptionsWrapper<NotificationOptions>(null),
             null);
     
-        var jwtToken = await userService.AuthenticateAsync(new AuthUserDto(email, password));
+        var jwtToken = await userService.AuthenticateAsync(new AuthUserDto(email, password, string.Empty));
         
         // Assert
-        Assert.False(string.IsNullOrWhiteSpace(jwtToken));
+        Assert.False(string.IsNullOrWhiteSpace(jwtToken.JwtToken));
     }
     
     [Fact]
@@ -154,14 +154,14 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
-            new OptionsWrapper<JwtToken>(null),
+            testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<ILogger<UserService>>());
         
         // Assert
         await Assert.ThrowsAsync<InvalidAuthorizationException>(async () =>
         {
-            var authUserDtoWithInvalidPassword = new AuthUserDto(email, invalidPassword);
+            var authUserDtoWithInvalidPassword = new AuthUserDto(email, invalidPassword, string.Empty);
     
             await userService.AuthenticateAsync(authUserDtoWithInvalidPassword);
         });
@@ -182,60 +182,44 @@ public class UserServiceTests : IClassFixture<TestFixture>
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
-            new OptionsWrapper<JwtToken>(null),
+            testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<ILogger<UserService>>());
         
         // Assert
         await Assert.ThrowsAsync<InvalidAuthorizationException>(async () =>
         {
-            var authUserDtoWithInvalidPassword = new AuthUserDto(email, password);
+            var authUserDtoWithInvalidPassword = new AuthUserDto(email, password, string.Empty);
 
             await userService.AuthenticateAsync(authUserDtoWithInvalidPassword);
         });
     }
     
    [Fact]
-    public void ValidateToken_ValidToken_ReturnsTrue()
+    public async Task ValidateToken_ValidToken_ReturnsTrue()
     {
         // Arrange
         var validToken = JwtHelper.GenerateJwtToken(_testSecretKey, 1, string.Empty);
-        
-        var jwtToken = new JwtToken { JwtSecret = _testSecretKey };
-        var authService = new UserService(
-            null, 
-            null,
-            null, 
-            null, 
-            new OptionsWrapper<JwtToken>(jwtToken),
-            new OptionsWrapper<NotificationOptions>(null),
-            null);
+
+        var tokenService = CreateJwtTokenService();
 
         // Act
-        var result = authService.ValidateToken(validToken);
+        var result = await tokenService.ValidateTokenAsync(validToken);
 
         // Assert
         Assert.True(result);
     }
 
     [Fact]
-    public void ValidateToken_InvalidToken_ReturnsFalse()
+    public async Task ValidateToken_InvalidToken_ReturnsFalse()
     {
         // Arrange
         var invalidToken = "wrong-secret-key";
         
-        var jwtToken = new JwtToken { JwtSecret = _testSecretKey };
-        var authService = new UserService(
-            null, 
-            null,
-            null, 
-            null, 
-            new OptionsWrapper<JwtToken>(jwtToken),
-            new OptionsWrapper<NotificationOptions>(null),
-            null);
-
+        var tokenService = CreateJwtTokenService();
+        
         // Act
-        var result = authService.ValidateToken(invalidToken);
+        var result = await tokenService.ValidateTokenAsync(invalidToken);
 
         // Assert
         Assert.False(result);
@@ -248,47 +232,38 @@ public class UserServiceTests : IClassFixture<TestFixture>
         var expiredToken = JwtHelper.GenerateJwtToken(_testSecretKey, 1, string.Empty, expires: DateTime.UtcNow.AddSeconds(2));
 
         await Task.Delay(TimeSpan.FromSeconds(5));
-        
-        var jwtToken = new JwtToken { JwtSecret = _testSecretKey };
-        var authService = new UserService(
-            null, 
-            null,
-            null, 
-            null, 
-            new OptionsWrapper<JwtToken>(jwtToken),
-            new OptionsWrapper<NotificationOptions>(new NotificationOptions
-            {
-                Token = string.Empty
-            }),
-            null);
 
+        var tokenService = CreateJwtTokenService();
+        
         // Act
-        var result = authService.ValidateToken(expiredToken);
+        var result = await tokenService.ValidateTokenAsync(expiredToken);
 
         // Assert
         Assert.False(result);
     }
 
     [Fact]
-    public void ValidateToken_MalformedToken_ReturnsFalse()
+    public async Task ValidateToken_MalformedToken_ReturnsFalse()
     {
         // Arrange
         var malformedToken = "invalid-token";
-        
-        var jwtToken = new JwtToken { JwtSecret = _testSecretKey };
-        var authService = new UserService(
-            null, 
-            null,
-            null, 
-            null,
-            new OptionsWrapper<JwtToken>(jwtToken),
-            new OptionsWrapper<NotificationOptions>(null),
-            null);
 
+        var tokenService = CreateJwtTokenService();
+        
         // Act
-        var result = authService.ValidateToken(malformedToken);
+        var result = await tokenService.ValidateTokenAsync(malformedToken);
 
         // Assert
         Assert.False(result);
+    }
+
+    private JwtTokenService CreateJwtTokenService()
+    {
+        using var testFixture = new TestFixture();
+
+        return new JwtTokenService(testFixture.GetService<IContextFactory>(), Options.Create(new JwtToken
+        {
+            JwtSecret = _testSecretKey
+        }));
     }
 }

@@ -1,6 +1,8 @@
-﻿using System.Transactions;
+﻿using System.Runtime.CompilerServices;
+using System.Transactions;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+[assembly: InternalsVisibleTo("CorporateSystem.Auth.Tests")]
 
 namespace CorporateSystem.Auth.Infrastructure.Repositories.Implementations;
 

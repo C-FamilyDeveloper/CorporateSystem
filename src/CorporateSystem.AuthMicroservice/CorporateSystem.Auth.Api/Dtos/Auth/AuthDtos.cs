@@ -52,6 +52,12 @@ public class AuthResponse
     public required string Token { get; set; }
 }
 
+public class RefreshTokenResponse
+{
+    [JsonPropertyName("token")]
+    public required string Token { get; set; }
+}
+
 public class TokenValidationRequest
 {
     [JsonPropertyName("token")]
@@ -89,4 +95,10 @@ public class UserInfo
     
     [JsonPropertyName("role")]
     public required string Role { get; init; }
+}
+
+public class RefreshTokenRequest
+{
+    [JsonPropertyName("refresh_token")]
+    public required string RefreshToken { get; init; }
 }

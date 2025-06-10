@@ -1,8 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Runtime.CompilerServices;
-using System.Security.Claims;
-using System.Text;
+﻿using System.Runtime.CompilerServices;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
@@ -16,10 +12,10 @@ using Grpc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
-[assembly:InternalsVisibleTo("CorporateSystem.Auth.Tests")]
+[assembly: InternalsVisibleTo("CorporateSystem.Auth.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
+
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
 internal class UserService(
@@ -27,91 +23,73 @@ internal class UserService(
     IPasswordHasher passwordHasher,
     IRegistrationCodesRepository registrationCodesRepository,
     GrpcNotificationClient grpcNotificationClient,
-    IOptions<JwtToken> jwtTokenOptions,
+    ITokenService tokenService,
     IOptions<NotificationOptions> notificationOptions,
     ILogger<UserService> logger) : IAuthService, IRegistrationService, IUserService
 {
-    private readonly JwtToken _jwtToken = jwtTokenOptions.Value;
     private readonly NotificationOptions _notificationOptions = notificationOptions.Value;
-    
-    public async Task<string> AuthenticateAsync(AuthUserDto dto, CancellationToken cancellationToken = default)
+
+    public Task<AuthResultDto> AuthenticateAsync(AuthUserDto dto, CancellationToken cancellationToken = default)
     {
-        var user = await contextFactory.ExecuteWithoutCommitAsync(async context =>
+        return contextFactory.ExecuteWithCommitAsync(async context =>
         {
-            return await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email, cancellationToken);
-        }, cancellationToken: cancellationToken);
+            var user = await context.Users
+                .Include(user => user.RefreshTokens)
+                .FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken);
 
-        if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
-        {
-            logger.LogInformation(user is null
-                ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
-                : $"{nameof(AuthenticateAsync)}: email={dto.Email}, actual_password={dto.Password}, expected_password={user.Password}");
-            
-            throw new InvalidAuthorizationException("Неправильный логин или пароль");
-        }
-        
-        return GenerateJwtToken(user);
-    }
-
-    public bool ValidateToken(string token)
-    {
-        try
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_jwtToken.JwtSecret);
-
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
             {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ClockSkew = TimeSpan.Zero
-            }, out var validatedToken);
+                logger.LogInformation(user is null
+                    ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
+                    : $"{nameof(AuthenticateAsync)}: email={dto.Email}, actual_password={dto.Password}, expected_password={user.Password}");
 
-            return validatedToken != null;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    
-    private string GenerateJwtToken(User user)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_jwtToken.JwtSecret);
+                throw new InvalidAuthorizationException("Неправильный логин или пароль");
+            }
 
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.ToString())
-            ]),
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
+            var tokens = await Task.WhenAll(
+                tokenService.GenerateJwtTokenAsync(user, cancellationToken),
+                tokenService.GenerateRefreshTokenAsync(new GenerateRefreshTokenDto(user.Id, dto.UserIpAddress),
+                    cancellationToken));
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+            var jwtToken = tokens[0];
+            var refreshToken = tokens[1];
+            
+            var now = DateTimeOffset.UtcNow;
+            
+            var existingToken = user.RefreshTokens.FirstOrDefault(rt => rt.IpAddress == dto.UserIpAddress && rt.ExpiryOn > now);
+
+            if (existingToken != null)
+            {
+                existingToken.Token = refreshToken;
+                existingToken.ExpiryOn = now.AddDays(30);
+            }
+            else
+            {
+                user.RefreshTokens.Add(new RefreshToken
+                {
+                    Token = refreshToken,
+                    IpAddress = dto.UserIpAddress,
+                    CreatedAt = now,
+                    ExpiryOn = now.AddDays(30),
+                    UserId = user.Id,
+                    User = user
+                });
+            }
+            
+            return new AuthResultDto(jwtToken);
+        }, cancellationToken: cancellationToken);
     }
 
     public async Task RegisterAsync(RegisterUserDto dto, CancellationToken cancellationToken = default)
     {
         if (dto.Password != dto.RepeatedPassword)
         {
-            logger.LogInformation($"{nameof(RegisterAsync)}: password={dto.Password}, repeated password={dto.RepeatedPassword}");
+            logger.LogInformation(
+                $"{nameof(RegisterAsync)}: password={dto.Password}, repeated password={dto.RepeatedPassword}");
             throw new InvalidRegistrationException("Пароли не совпадают");
         }
 
-        var existingUser = await contextFactory.ExecuteWithoutCommitAsync(
-            async context => 
-                await context.Users.FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken),
-            cancellationToken: cancellationToken);
+        var existingUser = GetUserByEmailAsync(dto.Email, cancellationToken);
 
         if (existingUser is not null)
         {
@@ -124,13 +102,13 @@ internal class UserService(
             logger.LogInformation($"{nameof(RegisterAsync)}: ключ с {dto.Email} уже сущесвует");
             throw new InvalidRegistrationException("Вам на почту уже отправлен код. Попробуйте получить новый позже.");
         }
-        
+
         var code = Random.Shared.Next(100_000, 1_000_000);
-        
+
         logger.LogInformation($"{nameof(RegisterAsync)}: Created code: {code}");
-        
+
         await registrationCodesRepository.CreateAsync([dto.Email], code, cancellationToken);
-        
+
         logger.LogInformation($"{nameof(RegisterAsync)}: Code {code} was written in redis");
         logger.LogInformation($"{nameof(RegisterAsync)}: Writing message to notification microservice");
 
@@ -147,14 +125,14 @@ internal class UserService(
         catch (Exception e)
         {
             logger.LogError($"{nameof(RegisterAsync)}: {e.Message}");
-            
+
             // Обвалилась отправка в мкс Notification, но запись в БД redis прошла успешно,
             // поэтому нужно откатить эту запись
             await registrationCodesRepository.DeleteAsync([dto.Email, code], cancellationToken);
-            
+
             throw;
         }
-        
+
         logger.LogInformation($"{nameof(RegisterAsync)}: Sending to notification is completed");
     }
 
@@ -163,14 +141,14 @@ internal class UserService(
         dto.ShouldBeValid(logger);
 
         var code = await registrationCodesRepository.GetAsync([dto.Email], cancellationToken);
-        
+
         if (code is null || code != dto.SuccessCode)
         {
             throw new InvalidRegistrationException("Неверный код");
         }
-        
+
         await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
-        
+
         await contextFactory.ExecuteWithCommitAsync(async context =>
         {
             await context.Users.AddAsync(new User
@@ -214,4 +192,38 @@ internal class UserService(
             return await users.ToArrayAsync(cancellationToken);
         }, cancellationToken: cancellationToken);
     }
+
+    public Task DeleteUsersAsync(int[] ids, CancellationToken cancellationToken = default)
+    {
+        return contextFactory.ExecuteWithCommitAsync(async context =>
+        {
+            var users = context.Users.AsQueryable();
+
+            var currentUsers = await users.Where(user => ids.Contains(user.Id)).ToArrayAsync(cancellationToken);
+
+            if (!currentUsers.Any())
+            {
+                throw new UserNotFoundException("Ни один пользователь не найден");
+            }
+
+            if (currentUsers.Length != ids.Length)
+            {
+                var userIds = currentUsers.Select(user => user.Id).ToArray();
+
+                var exceptIds = ids.Except(userIds).ToArray();
+
+                var message = $"Не найдены пользователи с идентификаторами {string.Join(",", exceptIds)}";
+
+                throw new UserNotFoundException(message);
+            }
+
+            context.Users.RemoveRange(currentUsers);
+        }, cancellationToken: cancellationToken);
+    }
+
+    private Task<User?> GetUserByEmailAsync(string email, CancellationToken cancellationToken) =>
+        contextFactory.ExecuteWithoutCommitAsync(
+            async context =>
+                await context.Users.FirstOrDefaultAsync(user => user.Email == email, cancellationToken),
+            cancellationToken: cancellationToken);
 }

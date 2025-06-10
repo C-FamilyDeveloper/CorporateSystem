@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text;
+using CorporateSystem.Auth.Api.Background.Jobs;
 using CorporateSystem.Auth.Api.Middlewares;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Extensions;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Quartz;
 using StackExchange.Redis;
 
 namespace CorporateSystem.Auth.Api;
@@ -58,9 +60,25 @@ public class Startup
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(Configuration.GetSection("JwtToken")["JwtSecret"]!)),
-                RoleClaimType = ClaimTypes.Role
+                RoleClaimType = ClaimTypes.Role,
+                ClockSkew = TimeSpan.Zero
             };
         });
+
+        services.AddQuartz(config =>
+        {
+            var jobKey = new JobKey("ClearExpiredRefreshTokensJob");
+            config.AddJob<ClearExpiredRefreshTokensJob>(opts => opts.WithIdentity(jobKey));
+            
+            config.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("ClearExpiredRefreshTokensTrigger")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInHours(12)
+                    .RepeatForever()));
+        });
+        
+        services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
         
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
