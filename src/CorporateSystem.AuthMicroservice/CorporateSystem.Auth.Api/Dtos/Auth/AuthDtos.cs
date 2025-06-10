@@ -52,6 +52,12 @@ public class AuthResponse
     public required string Token { get; set; }
 }
 
+public class RefreshTokenResponse
+{
+    [JsonPropertyName("token")]
+    public required string Token { get; set; }
+}
+
 public class TokenValidationRequest
 {
     [JsonPropertyName("token")]

@@ -41,11 +41,11 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         factory.MockAuthService.Setup(service => service.AuthenticateAsync(
                 It.IsAny<AuthUserDto>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(token);
+            .ReturnsAsync(new AuthResultDto(token));
 
-        factory.MockAuthService
-            .Setup(x => x.ValidateToken(It.Is<string>(str => str == token)))
-            .Returns(true);
+        factory.MockTokenService
+            .Setup(x => x.ValidateTokenAsync(It.Is<string>(str => str == token), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -72,7 +72,11 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
 
         Assert.NotNull(userInfo);
         
-        factory.MockAuthService.Verify(service => service.ValidateToken(validateTokenRequest.Token), Times.Once);
+        factory.MockTokenService.Verify(service => 
+            service.ValidateTokenAsync(
+                validateTokenRequest.Token,
+                It.IsAny<CancellationToken>()), 
+            Times.Once);
     }
 
     [Fact]
@@ -81,8 +85,8 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         // Arrange
         var token = "invalid-token";
 
-        factory.MockAuthService.Setup(service => service.ValidateToken(token))
-            .Returns(false);
+        factory.MockTokenService.Setup(service => service.ValidateTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -95,7 +99,11 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
 
-        factory.MockAuthService.Verify(service => service.ValidateToken(token), Times.Never);
+        factory.MockTokenService.Verify(service => 
+            service.ValidateTokenAsync(
+                token, 
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -104,8 +112,9 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         // Arrange
         var token = JwtHelper.GenerateJwtToken(TestSecretKey, 1, "someEmail@test.com");
 
-        factory.MockAuthService.Setup(service => service.ValidateToken(token))
-            .Returns(false);
+        factory.MockTokenService.Setup(service => 
+                service.ValidateTokenAsync(token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -118,7 +127,8 @@ public class AuthControllerTests(CustomWebApplicationFactory<Program> factory)
         // Assert
         Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
 
-        factory.MockAuthService.Verify(service => service.ValidateToken(It.IsAny<string>()), Times.Once);
+        factory.MockTokenService.Verify(service => 
+            service.ValidateTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     public void Dispose()

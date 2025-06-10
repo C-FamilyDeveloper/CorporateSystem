@@ -1,5 +1,6 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 USER $APP_UID
+COPY CorporateSystem.SharedDocs.Api/ban_words.txt /app/ban_words.txt
 WORKDIR /app
 EXPOSE 8093
 

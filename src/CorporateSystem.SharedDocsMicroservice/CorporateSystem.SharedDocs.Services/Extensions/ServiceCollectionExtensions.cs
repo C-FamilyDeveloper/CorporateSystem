@@ -16,6 +16,8 @@ public static class ServiceCollectionExtensions
         
         return services
             .AddScoped<IDocumentService, DocumentService>()
+            .AddSingleton<IBanWordsService, BanWordsService>()
+            .AddKeyedSingleton<IWordsFormatter, HtmlWordFormatter>(nameof(HtmlWordFormatter))
             .AddScoped<IDocumentChangeLogService, DocumentChangeLogService>();
     }
 }

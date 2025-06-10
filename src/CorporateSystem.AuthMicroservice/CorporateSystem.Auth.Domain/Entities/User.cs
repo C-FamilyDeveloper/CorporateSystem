@@ -11,4 +11,5 @@ public class User
     public required string LastName { get; init; }
     public Gender Gender { get; init; }
     public Role Role { get; init; }
+    public List<RefreshToken> RefreshTokens { get; init; }
 }

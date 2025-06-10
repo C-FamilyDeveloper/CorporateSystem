@@ -69,7 +69,7 @@ public class DocumentHub(
 
         await ThrowIfUserDontHavePermissionsToEditCurrentDocument(request.DocumentId, userInfo.Id, Context.ConnectionAborted);
         
-        await documentService.UpdateDocumentContentAsync(new UpdateDocumentContentDto
+        var newContent = await documentService.UpdateDocumentContentAsync(new UpdateDocumentContentDto
         {
             DocumentId = request.DocumentId,
             UserId = userInfo.Id,
@@ -82,7 +82,7 @@ public class DocumentHub(
             Context.ConnectionAborted);
         
         await Clients.Group(request.DocumentId.ToString()).SendAsync("ReceiveChangeLogs", logResponses);
-        await Clients.Group(request.DocumentId.ToString()).SendAsync("ReceiveDocumentUpdate", request.NewContent); 
+        await Clients.Group(request.DocumentId.ToString()).SendAsync("ReceiveDocumentUpdate", newContent); 
     }
 
     private UserInfo GetUserInfoOrThrowException()

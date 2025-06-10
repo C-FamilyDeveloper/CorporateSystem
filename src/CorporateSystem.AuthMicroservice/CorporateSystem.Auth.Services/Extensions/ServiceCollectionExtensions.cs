@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<IRegistrationService, UserService>()
             .AddScoped<GrpcNotificationClient>()
             .AddScoped<IUserService, UserService>()
+            .AddScoped<ITokenService, JwtTokenService>()
             .AddSingleton<IPasswordHasher, PasswordHasher>();
     }
 }

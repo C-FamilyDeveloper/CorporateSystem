@@ -6,4 +6,5 @@ namespace CorporateSystem.Auth.Services.Services.Interfaces;
 public interface IUserService
 {
     Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default);
+    Task DeleteUsersAsync(int[] ids, CancellationToken cancellationToken = default);
 }

@@ -14,6 +14,7 @@ public class CustomWebApplicationFactory<TEntryPoint>
     public Mock<IAuthService> MockAuthService { get; } = new();
     public Mock<IRegistrationService> MockRegistrationService { get; } = new();
     public Mock<IUserService> MockUserService { get; } = new();
+    public Mock<ITokenService> MockTokenService { get; } = new();
     public string TestSecretKey { get; set; }
 
     public CustomWebApplicationFactory()
@@ -32,6 +33,7 @@ public class CustomWebApplicationFactory<TEntryPoint>
             services.Replace(new ServiceDescriptor(typeof(IUserService), MockUserService.Object));
             services.Replace(new ServiceDescriptor(typeof(IAuthService), MockAuthService.Object));
             services.Replace(new ServiceDescriptor(typeof(IRegistrationService), MockRegistrationService.Object));
+            services.Replace(new ServiceDescriptor(typeof(ITokenService), MockTokenService.Object));
         });
     }
 
@@ -40,5 +42,6 @@ public class CustomWebApplicationFactory<TEntryPoint>
         MockUserService.Invocations.Clear();
         MockAuthService.Invocations.Clear();
         MockRegistrationService.Invocations.Clear();
+        MockTokenService.Invocations.Clear();
     }
 }
