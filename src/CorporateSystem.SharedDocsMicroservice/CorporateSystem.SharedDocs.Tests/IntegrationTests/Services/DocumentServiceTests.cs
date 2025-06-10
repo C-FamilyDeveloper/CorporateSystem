@@ -300,7 +300,7 @@ public class DocumentServiceTests
         var documentIds = new[] { 1, 2 };
 
         // Act
-        await _documentService.DeleteDocumentAsync(documentIds);
+        await _documentService.DeleteDocumentAsync(new DeleteDocumentDto(Ids: documentIds));
 
         // Assert
         _mockDocumentRepository.Verify(repo => repo.DeleteAsync(

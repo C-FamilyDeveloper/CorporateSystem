@@ -164,8 +164,34 @@ public class ApiController(
             return BadRequest("Что-то пошло не так");
         }
             
-        await documentService.DeleteDocumentAsync([documentId]);
+        await documentService.DeleteDocumentAsync(new DeleteDocumentDto(Ids: [documentId]));
 
+        return Ok();
+    }
+
+    [HttpDelete("documents/users/{userId:int}")]
+    public async Task<IActionResult> DeleteDocumentByUserId([FromRoute] int userId)
+    {
+        logger.LogInformation($"{nameof(DeleteDocument)}: connectionId={HttpContext.Connection.Id}");
+        if (!HttpContext.Request.Headers.TryGetValue("X-User-Info", out var userInfoValue))
+        {
+            logger.LogInformation($"{nameof(DeleteDocument)}: X-User-Info отсутствует");
+            return BadRequest("Отсутствует информация о пользователе");
+        }
+        
+        var userInfo = JsonSerializer.Deserialize<UserInfo>(userInfoValue);
+
+        if (userInfo == null)
+        {
+            logger.LogInformation($"{nameof(CreateDocument)}: userInfo=null");
+            return BadRequest("Что-то пошло не так");
+        }
+
+        var deleteDocumentTask = documentService.DeleteDocumentAsync(new DeleteDocumentDto(OwnerIds: [userId]));
+        var deleteDocumentUserTask = documentService.DeleteDocumentUsersAsync(new DeleteDocumentUsersDto(UserIds: [userId]));
+
+        await Task.WhenAll(deleteDocumentTask, deleteDocumentUserTask);
+        
         return Ok();
     }
     

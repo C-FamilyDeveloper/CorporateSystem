@@ -33,6 +33,34 @@ internal class DocumentService(
         return document;
     }
 
+    public async Task<IEnumerable<DocumentInfoDto>> GetDocumentsAsync(CancellationToken cancellationToken = default)
+    {
+        var documents = await documentRepository.GetAsync(cancellationToken: cancellationToken);
+
+        var documentsArray = documents.ToArray();
+
+        var result = new List<DocumentInfoDto>();
+
+        foreach (var document in documentsArray)
+        {
+            var email = (await authApiService.GetUserEmailsByIdsAsync(
+                    [document.OwnerId],
+                    cancellationToken: cancellationToken))
+                .Single();
+            
+            result.Add(new DocumentInfoDto
+            {
+                Title = document.Title,
+                CreatedAt = document.CreatedAt,
+                ModifiedAt = document.ModifiedAt,
+                Id = document.Id,
+                OwnerEmail = email
+            });
+        }
+
+        return result;
+    }
+
     public async Task<int> CreateDocumentAsync(CreateDocumentDto dto, CancellationToken cancellationToken = default)
     {
         var ids = await documentRepository.CreateAsync(
@@ -174,12 +202,28 @@ internal class DocumentService(
         }, cancellationToken);
     }
 
-    public Task DeleteDocumentAsync(int[] ids, CancellationToken cancellationToken = default)
+    public Task DeleteDocumentAsync(DeleteDocumentDto dto, CancellationToken cancellationToken = default)
     {
         return documentRepository.DeleteAsync(new DocumentFilter
         {
-            Ids = ids
+            Ids = dto.Ids,
+            CreatedAt = dto.CreatedAt,
+            ModifiedAt = dto.ModifiedAt,
+            Contents = dto.Contents,
+            Titles = dto.Titles,
+            OwnerIds = dto.OwnerIds
         }, cancellationToken);
+    }
+
+    public Task DeleteDocumentUsersAsync(DeleteDocumentUsersDto dto, CancellationToken cancellationToken = default)
+    {
+        return documentUserRepository.DeleteAsync(new DocumentUserFilter
+        {
+            DocumentIds = dto.DocumentIds,
+            UserIds = dto.UserIds,
+            Ids = dto.Ids,
+            AccessLevels = dto.AccessLevels
+        }, cancellationToken: cancellationToken);
     }
 
     private async Task<Document> GetDocumentOrThrowExceptionAsync(
