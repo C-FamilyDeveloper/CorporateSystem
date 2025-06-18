@@ -5,6 +5,7 @@ using CorporateSystem.Auth.Api.Middlewares;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Extensions;
 using CorporateSystem.Auth.Infrastructure.Options;
+using CorporateSystem.Auth.Kafka.Extensions;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -31,6 +32,7 @@ public class Startup
         
         services.AddAuthInfrastructure();
         services.AddAuthServices();
+        services.AddKeyedProduceHandler();
         
         services.Configure<JwtToken>(Configuration.GetSection("JwtToken"));
         services.Configure<RedisOptions>(Configuration.GetSection("RedisOptions"));

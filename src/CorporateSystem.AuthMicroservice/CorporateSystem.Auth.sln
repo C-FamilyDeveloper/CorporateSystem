@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Servic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Tests", "CorporateSystem.Auth.Tests\CorporateSystem.Auth.Tests.csproj", "{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CorporateSystem.Auth.Kafka", "CorporateSystem.Auth.Kafka\CorporateSystem.Auth.Kafka.csproj", "{0C7561E8-6FBF-40FD-AE51-8AAFA8DA127C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,5 +49,9 @@ Global
 		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{312DFBC1-80F7-4DEF-9090-1EF62EAE5A9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C7561E8-6FBF-40FD-AE51-8AAFA8DA127C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C7561E8-6FBF-40FD-AE51-8AAFA8DA127C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C7561E8-6FBF-40FD-AE51-8AAFA8DA127C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C7561E8-6FBF-40FD-AE51-8AAFA8DA127C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
