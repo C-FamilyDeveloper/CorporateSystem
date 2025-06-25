@@ -3,8 +3,8 @@ using CorporateSystem.Auth.Kafka.Interfaces;
 
 namespace CorporateSystem.Auth.Kafka.Models;
 
-public class UserDeleteEvent : IKeyedEvent<Ignore>
+public class UserDeleteEvent : IKeyedEvent<Null>
 {
     public int UserId { get; init; }
-    public Ignore Key { get; init; }
+    public Null Key { get; init; }
 }

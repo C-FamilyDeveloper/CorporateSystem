@@ -6,6 +6,8 @@ using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Extensions;
 using CorporateSystem.Auth.Infrastructure.Options;
 using CorporateSystem.Auth.Kafka.Extensions;
+using CorporateSystem.Auth.Kafka.Models;
+using CorporateSystem.Auth.Kafka.Options;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -38,6 +40,7 @@ public class Startup
         services.Configure<RedisOptions>(Configuration.GetSection("RedisOptions"));
         services.Configure<NotificationOptions>(Configuration.GetSection("NotificationOptions"));
         services.Configure<GrpcNotificationOptions>(Configuration.GetSection("GrpcNotificationOptions"));
+        services.Configure<ProducerOptions>($"{nameof(UserDeleteEvent)}", Configuration.GetSection("ProducerOptions"));
         
         services.AddStackExchangeRedisCache(options =>
         {
