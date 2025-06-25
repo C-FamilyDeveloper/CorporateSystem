@@ -21,13 +21,13 @@ public class KafkaAsyncConsumer<TKey, TEvent> : IDisposable
 
     public KafkaAsyncConsumer(
         IOptionsSnapshot<ConsumerOptions> options,
-        [FromKeyedServices(nameof(UserConsumerHandler))] IConsumerHandler<TKey, TEvent> handler,
+        IServiceProvider serviceProvider,
         ILogger<KafkaAsyncConsumer<TKey, TEvent>> logger,
         IDeserializer<TKey>? keyDeserializer = null,
         IDeserializer<TEvent>? valueDeserializer = null)
     {
         var optionsSnapshot = options.Get(typeof(TEvent).Name);
-        _handler = handler;
+        _handler = serviceProvider.GetRequiredKeyedService<IConsumerHandler<TKey, TEvent>>(typeof(TEvent).Name);
         _logger = logger;
         logger.LogInformation($"{nameof(KafkaAsyncConsumer<TKey, TEvent>)}: consumer options: " +
                               $"bootstrap_server={optionsSnapshot.BootstrapServer}, " +

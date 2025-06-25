@@ -15,6 +15,6 @@ public static class ServiceCollectionExtensions
             .AddSingleton<KafkaAsyncConsumer<Null, UserDeleteEvent>>()
             .AddSingleton<IDeserializer<UserDeleteEvent>, TextJsonSerializer<UserDeleteEvent>>()
             .AddSingleton<IDeserializer<Null>>(_ => Deserializers.Null)
-            .AddKeyedSingleton<IConsumerHandler<Null, UserDeleteEvent>, UserConsumerHandler>(nameof(UserConsumerHandler));
+            .AddKeyedSingleton<IConsumerHandler<Null, UserDeleteEvent>, UserConsumerHandler>(nameof(UserDeleteEvent));
     }
 }
