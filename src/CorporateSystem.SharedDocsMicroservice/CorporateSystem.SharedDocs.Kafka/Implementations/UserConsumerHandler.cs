@@ -11,40 +11,27 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.SharedDocs.Kafka.Implementations;
 
-internal class UserConsumerHandler : IConsumerHandler<Ignore, string>
+internal class UserConsumerHandler(
+    ILogger<UserConsumerHandler> logger,
+    IDocumentService documentService)
+    : IConsumerHandler<Null, UserDeleteEvent>
 {
-    private readonly ILogger<UserConsumerHandler> _logger;
-    private readonly IDocumentService _documentService;
-    
-    public UserConsumerHandler(
-        ILogger<UserConsumerHandler> logger, 
-        IDocumentService documentService)
-    {
-        _logger = logger;
-        _documentService = documentService;
-    }
-    
     public async Task Handle(
-        IReadOnlyList<ConsumeResult<Ignore, string>> messages,
+        IReadOnlyList<ConsumeResult<Null, UserDeleteEvent>> messages,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var userDeleteEvents = messages
-                .Select(message =>
-                    JsonSerializer.Deserialize<UserDeleteEvent>(message.Message.Value)
-                    ?? throw new ArgumentNullException(message: message.Message.Value,
-                        innerException: null))
-                .ToList();
-
-            var userIds = userDeleteEvents.Select(@event => @event.UserId).ToArray();
+            var userIds = messages.Select(result => result.Message.Value.UserId).ToArray();
             
-            var deleteDocumentOwnerTask = _documentService.DeleteDocumentAsync(new DeleteDocumentDto
+            logger.LogInformation($"{nameof(UserConsumerHandler)}: Received userIds={string.Join(",", userIds)}");
+            
+            var deleteDocumentOwnerTask = documentService.DeleteDocumentAsync(new DeleteDocumentDto
             {
                 OwnerIds = userIds
             }, cancellationToken);
 
-            var deleteDocumentUsersTask = _documentService.DeleteDocumentUsersAsync(new DeleteDocumentUsersDto
+            var deleteDocumentUsersTask = documentService.DeleteDocumentUsersAsync(new DeleteDocumentUsersDto
             {
                 UserIds = userIds
             }, cancellationToken);
@@ -53,7 +40,7 @@ internal class UserConsumerHandler : IConsumerHandler<Ignore, string>
         }
         catch (Exception ex)
         {
-            _logger.LogError($"{nameof(UserConsumerHandler)}: {ex.Message}");
+            logger.LogError($"{nameof(UserConsumerHandler)}: {ex.Message}");
             throw;
         }  
     }

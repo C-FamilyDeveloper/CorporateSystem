@@ -1,6 +1,6 @@
 ﻿namespace CorporateSystem.SharedDocs.Kafka.Options;
 
-public class KafkaOptions
+public class ConsumerOptions
 {
     public required string BootstrapServer { get; init; }
     public required string GroupId { get; init; }
