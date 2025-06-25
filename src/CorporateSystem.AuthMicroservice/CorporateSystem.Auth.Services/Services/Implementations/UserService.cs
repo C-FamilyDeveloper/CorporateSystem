@@ -1,7 +1,11 @@
 ﻿using System.Runtime.CompilerServices;
+using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+using CorporateSystem.Auth.Kafka;
+using CorporateSystem.Auth.Kafka.Interfaces;
+using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
@@ -10,6 +14,7 @@ using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Grpc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,6 +30,7 @@ internal class UserService(
     GrpcNotificationClient grpcNotificationClient,
     ITokenService tokenService,
     IOptions<NotificationOptions> notificationOptions,
+    KafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
     ILogger<UserService> logger) : IAuthService, IRegistrationService, IUserService
 {
     private readonly NotificationOptions _notificationOptions = notificationOptions.Value;
@@ -84,7 +90,7 @@ internal class UserService(
     {
         dto.ShouldBeValid(logger);
 
-        var existingUser = GetUserByEmailAsync(dto.Email, cancellationToken);
+        var existingUser = await GetUserByEmailAsync(dto.Email, cancellationToken);
 
         if (existingUser is not null)
         {
@@ -192,19 +198,19 @@ internal class UserService(
     {
         return contextFactory.ExecuteWithCommitAsync(async context =>
         {
-            var users = context.Users.AsQueryable();
-
-            var currentUsers = await users.Where(user => ids.Contains(user.Id)).ToArrayAsync(cancellationToken);
+            var currentUsers = await context.Users
+                .Where(user => ids.Contains(user.Id))
+                .ToArrayAsync(cancellationToken);
 
             if (!currentUsers.Any())
             {
                 throw new UserNotFoundException("Ни один пользователь не найден");
             }
 
+            var userIds = currentUsers.Select(user => user.Id).ToArray();
+            
             if (currentUsers.Length != ids.Length)
             {
-                var userIds = currentUsers.Select(user => user.Id).ToArray();
-
                 var exceptIds = ids.Except(userIds).ToArray();
 
                 var message = $"Не найдены пользователи с идентификаторами {string.Join(",", exceptIds)}";
@@ -213,6 +219,11 @@ internal class UserService(
             }
 
             context.Users.RemoveRange(currentUsers);
+
+            await kafkaAsyncProducer.ProduceAsync(userIds.Select(userId => new UserDeleteEvent
+            {
+                UserId = userId
+            }).ToList(), cancellationToken);
         }, cancellationToken: cancellationToken);
     }
 

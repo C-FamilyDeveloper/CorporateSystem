@@ -2,12 +2,14 @@
 using CorporateSystem.SharedDocs.Api.Responses;
 using CorporateSystem.SharedDocs.Services.Dtos;
 using CorporateSystem.SharedDocs.Services.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UserInfo = CorporateSystem.SharedDocs.Api.Requests.UserInfo;
 
 namespace CorporateSystem.SharedDocs.Api.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/docs/admin")]
 public class AdminController(ILogger<AdminController> logger) : ControllerBase
 {
@@ -27,11 +29,6 @@ public class AdminController(ILogger<AdminController> logger) : ControllerBase
         {
             logger.LogInformation($"{nameof(GetDocuments)}: userInfo=null");
             return BadRequest("Что-то пошло не так");
-        }
-
-        if (userInfo.Role.ToLower() != "admin")
-        {
-            return Unauthorized("У вас недостаточно прав для выполнения текущей операции");
         }
         
         var documents = await documentService.GetDocumentsAsync();
@@ -68,11 +65,6 @@ public class AdminController(ILogger<AdminController> logger) : ControllerBase
             logger.LogInformation($"{nameof(GetDocumentContent)}: userInfo=null");
             return BadRequest("Что-то пошло не так");
         }
-
-        if (userInfo.Role.ToLower() != "admin")
-        {
-            return Unauthorized("У вас недостаточно прав для выполнения текущей операции");
-        }
         
         var document = await documentService.GetDocumentAsync(documentId);
 
@@ -100,11 +92,6 @@ public class AdminController(ILogger<AdminController> logger) : ControllerBase
         {
             logger.LogInformation($"{nameof(GetDocumentContent)}: userInfo=null");
             return BadRequest("Что-то пошло не так");
-        }
-
-        if (userInfo.Role.ToLower() != "admin")
-        {
-            return Unauthorized("У вас недостаточно прав для выполнения текущей операции");
         }
 
         await documentService.DeleteDocumentAsync(new DeleteDocumentDto

@@ -26,6 +26,7 @@
     <ItemGroup>
       <ProjectReference Include="..\CorporateSystem.Auth.Domain\CorporateSystem.Auth.Domain.csproj" />
       <ProjectReference Include="..\CorporateSystem.Auth.Infrastructure\CorporateSystem.Auth.Infrastructure.csproj" />
+      <ProjectReference Include="..\CorporateSystem.Auth.Kafka\CorporateSystem.Auth.Kafka.csproj" />
     </ItemGroup>
 
 </Project>

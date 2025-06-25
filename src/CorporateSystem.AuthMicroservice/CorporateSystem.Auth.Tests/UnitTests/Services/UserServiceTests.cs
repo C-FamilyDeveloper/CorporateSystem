@@ -2,10 +2,14 @@
 using System.Security.Claims;
 using System.Text;
 using AutoFixture.Xunit2;
+using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+using CorporateSystem.Auth.Kafka;
+using CorporateSystem.Auth.Kafka.Interfaces;
+using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
@@ -45,6 +49,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
+            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
         
         // Arrange
@@ -80,6 +85,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
+            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
             new LoggerFactory().CreateLogger<UserService>());
         
         var email = "test@bobr.ru";
@@ -121,6 +127,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             testFixture.GetService<ITokenService>(), 
             new OptionsWrapper<NotificationOptions>(null),
+            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
     
         var jwtToken = await userService.AuthenticateAsync(new AuthUserDto(email, password, string.Empty));
@@ -156,6 +163,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
+            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
         // Assert
@@ -184,6 +192,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
+            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
         // Assert

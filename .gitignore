@@ -1,6 +1,7 @@
 ﻿### Example user template template
 ### Example user template
 
+src/CorporateSystem.AuthMicroservice/kafka-data/
 # IntelliJ project files
 .idea
 *.iml

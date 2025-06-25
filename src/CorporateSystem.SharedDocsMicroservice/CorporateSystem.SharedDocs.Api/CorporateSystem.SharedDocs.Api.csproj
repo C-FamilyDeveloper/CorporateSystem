@@ -8,12 +8,15 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Confluent.Kafka" Version="2.10.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.6" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2"/>
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="9.0.4" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\CorporateSystem.SharedDocs.Infrastructure\CorporateSystem.SharedDocs.Infrastructure.csproj" />
+      <ProjectReference Include="..\CorporateSystem.SharedDocs.Kafka\CorporateSystem.SharedDocs.Kafka.csproj" />
       <ProjectReference Include="..\CorporateSystem.SharedDocs.Services\CorporateSystem.SharedDocs.Services.csproj" />
     </ItemGroup>
 
