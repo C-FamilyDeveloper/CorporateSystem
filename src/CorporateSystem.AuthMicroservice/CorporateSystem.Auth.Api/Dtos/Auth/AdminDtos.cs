@@ -9,6 +9,15 @@ public class DeleteUsersRequest
     public int[] UserIds { get; init; } = [];
 }
 
+public class GetUsersRequest
+{
+    [JsonPropertyName("page")]
+    public int Page { get; init; }
+    
+    [JsonPropertyName("per_page")]
+    public int PerPage { get; init; }
+}
+
 public class GetUsersResponse
 {
     [JsonPropertyName("id")]

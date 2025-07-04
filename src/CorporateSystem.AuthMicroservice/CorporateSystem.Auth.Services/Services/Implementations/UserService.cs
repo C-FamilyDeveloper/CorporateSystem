@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
@@ -10,7 +11,6 @@ using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
-using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Grpc;
@@ -168,24 +168,14 @@ internal sealed class UserService(
         await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
     }
 
-            if (filter.Passwords.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Passwords!.Contains(user.Password));
-            }
-
-            if (filter.Emails.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Emails!.Contains(user.Email));
-            }
-
-            if (filter.Roles.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Roles!.Contains(user.Role));
-            }
-
-            return await users.ToArrayAsync(cancellationToken);
-        }, cancellationToken: cancellationToken);
-    }
+    public Task<User[]> GetUsersByExpressionAsync(
+        Expression<Func<User, bool>> expression,
+        CancellationToken cancellationToken = default) =>
+            contextFactory.ExecuteWithoutCommitAsync(async context =>
+                    await context.Users
+                        .Where(expression)
+                        .ToArrayAsync(cancellationToken),
+                cancellationToken: cancellationToken);
 
     public Task DeleteUsersAsync(int[] ids, CancellationToken cancellationToken = default)
     {
