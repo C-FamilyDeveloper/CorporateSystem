@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAuthInfrastructure(this IServiceCollection services)
     {
         return services
-            .AddScoped<IContextFactory, ContextFactory>()
+            .AddTransient<IContextFactory<DataContext>, ContextFactory<DataContext>>()
             .AddScoped<IRegistrationCodesRepository, RegistrationCodesRepository>()
             .AddSingleton<IConnectionMultiplexer>(sp =>
             {

@@ -7,6 +7,7 @@ public class DataContext : DbContext
 {
     public DbSet<User> Users { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<OutboxEvent> OutboxEvents { get; set; }
 
     public DataContext()
     {
@@ -46,6 +47,18 @@ public class DataContext : DbContext
 
             entity.HasIndex(rt => rt.UserId);
             entity.HasIndex(rt => rt.Token).IsUnique().HasDatabaseName("IX_RefreshToken_Token");
+        });
+
+        modelBuilder.Entity<OutboxEvent>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Payload).IsRequired();
+            entity.Property(x => x.EventType).IsRequired().HasMaxLength(255);
+            entity.Property(x => x.CreatedAtUtc).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(x => x.Processed).HasDefaultValue(false);
+
+            entity.HasIndex(x => new { x.Processed, x.CreatedAtUtc })
+                .HasDatabaseName("IX_OutboxEvent_Processed_CreatedAt");
         });
     }
 }

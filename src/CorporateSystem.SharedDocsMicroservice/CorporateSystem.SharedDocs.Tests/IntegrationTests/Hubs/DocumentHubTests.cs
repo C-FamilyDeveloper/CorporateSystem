@@ -70,10 +70,10 @@ public class DocumentHubTests(CustomWebApplicationFactory<Program> factory)
             .Setup(service => service.UpdateDocumentContentAsync(
                 It.Is<UpdateDocumentContentDto>(dto => dto.DocumentId == documentId),
                 It.IsAny<CancellationToken>()))
-            .Returns((UpdateDocumentContentDto dto, CancellationToken _) =>
+            .ReturnsAsync((UpdateDocumentContentDto dto, CancellationToken _) =>
             {
                 document.Content = dto.NewContent;
-                return Task.CompletedTask;
+                return document.Content;
             });
         
         factory.MockDocumentChangeLogService

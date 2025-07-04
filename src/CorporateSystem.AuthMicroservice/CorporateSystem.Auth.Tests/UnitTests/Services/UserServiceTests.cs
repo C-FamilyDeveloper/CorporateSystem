@@ -1,24 +1,18 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Kafka;
-using CorporateSystem.Auth.Kafka.Interfaces;
 using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
-using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Implementations;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using CorporateSystem.Auth.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using Moq;
 
 namespace CorporateSystem.Auth.Tests.UnitTests.Services;
@@ -43,13 +37,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
             .ReturnsAsync(() => successCode);
         
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
-            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
+            Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
         
         // Arrange
@@ -79,13 +73,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
             .ReturnsAsync(() => null);
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
-            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
+            Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             new LoggerFactory().CreateLogger<UserService>());
         
         var email = "test@bobr.ru";
@@ -121,13 +115,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
     
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
             testFixture.GetService<ITokenService>(), 
             new OptionsWrapper<NotificationOptions>(null),
-            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
+            Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
     
         var jwtToken = await userService.AuthenticateAsync(new AuthUserDto(email, password, string.Empty));
@@ -157,13 +151,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
     
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
-            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
+            Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
         // Assert
@@ -186,13 +180,13 @@ public class UserServiceTests : IClassFixture<TestFixture>
 
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
             testFixture.GetService<ITokenService>(),
             new OptionsWrapper<NotificationOptions>(null),
-            Mock.Of<KafkaAsyncProducer<Null, UserDeleteEvent>>(),
+            Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
         // Assert
@@ -270,7 +264,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     {
         using var testFixture = new TestFixture();
 
-        return new JwtTokenService(testFixture.GetService<IContextFactory>(), Options.Create(new JwtToken
+        return new JwtTokenService(testFixture.GetService<IContextFactory<DataContext>>(), Options.Create(new JwtToken
         {
             JwtSecret = _testSecretKey
         }));

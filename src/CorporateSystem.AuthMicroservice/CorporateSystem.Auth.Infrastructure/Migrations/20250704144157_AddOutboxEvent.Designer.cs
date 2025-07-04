@@ -3,6 +3,7 @@ using System;
 using CorporateSystem.Auth.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CorporateSystem.Auth.Infrastructure.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250704144157_AddOutboxEvent")]
+    partial class AddOutboxEvent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -54,7 +57,7 @@ namespace CorporateSystem.Auth.Infrastructure.Migrations
                     b.HasIndex("Processed", "CreatedAtUtc")
                         .HasDatabaseName("IX_OutboxEvent_Processed_CreatedAt");
 
-                    b.ToTable("OutboxEvents", (string)null);
+                    b.ToTable("OutboxEvents");
                 });
 
             modelBuilder.Entity("CorporateSystem.Auth.Domain.Entities.RefreshToken", b =>
@@ -90,7 +93,7 @@ namespace CorporateSystem.Auth.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("CorporateSystem.Auth.Domain.Entities.User", b =>
@@ -128,7 +131,7 @@ namespace CorporateSystem.Auth.Infrastructure.Migrations
                     b.HasIndex("Gender")
                         .HasDatabaseName("IX_Users_Gender");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("CorporateSystem.Auth.Domain.Entities.RefreshToken", b =>

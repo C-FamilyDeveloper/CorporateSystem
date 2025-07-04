@@ -20,7 +20,7 @@ public class KafkaAsyncConsumer<TKey, TEvent> : IDisposable
     private readonly ILogger<KafkaAsyncConsumer<TKey, TEvent>> _logger;
 
     public KafkaAsyncConsumer(
-        IOptionsSnapshot<ConsumerOptions> options,
+        IOptionsMonitor<ConsumerOptions> options,
         IServiceProvider serviceProvider,
         ILogger<KafkaAsyncConsumer<TKey, TEvent>> logger,
         IDeserializer<TKey>? keyDeserializer = null,

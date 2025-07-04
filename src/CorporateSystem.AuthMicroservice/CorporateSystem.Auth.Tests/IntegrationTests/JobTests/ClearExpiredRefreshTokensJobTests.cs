@@ -40,7 +40,7 @@ public class ClearExpiredRefreshTokensJobTests
         
         await context.SaveChangesAsync();
 
-        var contextFactory = new ContextFactory(options);
+        var contextFactory = new ContextFactory<DataContext>(options);
         
         // Act
         var job = new ClearExpiredRefreshTokensJob(contextFactory, Mock.Of<ILogger<ClearExpiredRefreshTokensJob>>());

@@ -1,9 +1,11 @@
 ﻿using CorporateSystem.Auth.Api.Dtos.Auth;
 using CorporateSystem.Auth.Domain.Enums;
-using CorporateSystem.Auth.Services.Services.Filters;
+using CorporateSystem.Auth.Infrastructure;
+using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CorporateSystem.Auth.Api.Controllers;
 
@@ -12,10 +14,15 @@ namespace CorporateSystem.Auth.Api.Controllers;
 [Route("api/auth/admin")]
 public class AdminController : ControllerBase
 {
-    [HttpGet("users")]
-    public async Task<IActionResult> GetUsers([FromServices] IUserService userService)
+    [HttpPost("users")]
+    public async Task<IActionResult> GetUsers(
+        [FromBody] GetUsersRequest request,
+        [FromServices] IContextFactory<DataContext> contextFactory)
     {
-        var users = await userService.GetUsersByFilterAsync(new UserFilter());
+        var users = await contextFactory.ExecuteWithoutCommitAsync(context => context.Users
+            .Skip((request.Page - 1) * request.PerPage)
+            .Take(request.PerPage)
+            .ToArrayAsync());
 
         var response = users.Select(user => new GetUsersResponse
         {
@@ -30,12 +37,12 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
     
-    [HttpDelete("users/{userId:int}")]
+    [HttpPost("users/{userId:int}")]
     public async Task<IActionResult> DeleteUser(
-        [FromRoute] int userId,
+        [FromBody] DeleteUsersRequest request,
         [FromServices] IUserService userService)
     {
-        await userService.DeleteUsersAsync([userId]);
+        await userService.DeleteUsersAsync(request.UserIds);
 
         return Ok();
     }

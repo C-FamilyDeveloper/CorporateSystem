@@ -1,7 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using CorporateSystem.Auth.Api.Dtos.Auth;
 using CorporateSystem.Auth.Services.Exceptions;
-using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -115,12 +114,9 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         [FromServices] IUserService userService)
     {
         logger.LogInformation($"{nameof(GetUserEmailsById)}: connectionId={HttpContext.Connection.Id}");
-            
-        var users = await userService.GetUsersByFilterAsync(new UserFilter
-        {
-            Ids = request.UserIds
-        });
-            
+        
+        var users = await userService.GetUsersByExpressionAsync(user => request.UserIds.Contains(user.Id));
+        
         var emails = users.Select(user => user.Email).ToArray();
 
         logger.LogInformation($"{nameof(GetUserEmailsById)}: emails={string.Join(",", emails)}");
@@ -137,11 +133,8 @@ public class AuthController(ILogger<AuthController> logger) : ControllerBase
         [FromServices] IUserService userService)
     {
         logger.LogInformation($"{nameof(GetUserIdsByEmail)}: connectionId={HttpContext.Connection.Id}");
-            
-        var users = await userService.GetUsersByFilterAsync(new UserFilter
-        {
-            Emails = request.UserEmails
-        });
+        
+        var users = await userService.GetUsersByExpressionAsync(user => request.UserEmails.Contains(user.Email));
             
         var ids = users.Select(user => user.Id).ToArray();
             

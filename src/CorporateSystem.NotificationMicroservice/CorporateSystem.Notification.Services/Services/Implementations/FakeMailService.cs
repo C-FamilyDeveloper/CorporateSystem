@@ -1,4 +1,5 @@
 ﻿using System.Transactions;
+using CorporateSystem.Infrastructure.Repositories;
 using CorporateSystem.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Notification.Domain.Entities;
 using CorporateSystem.Services.Dtos;
@@ -9,21 +10,22 @@ using Microsoft.Extensions.Logging;
 namespace CorporateSystem.Services.Services.Implementations;
 
 public interface IFakeMailService : IMailService;
-internal class FakeMailService(
+
+internal sealed class FakeMailService(
     IFakeMailApiService fakeMailApiService,
-    IContextFactory contextFactory,
+    IContextFactory<DataContext> contextFactory,
     ILogger<IFakeMailService> logger) : IFakeMailService
 {
-    public async Task SendMailAsync(SendMailDto dto, CancellationToken cancellationToken = default)
+    public async Task SendMailAsync(SendMailDto sendMailDto, CancellationToken cancellationToken = default)
     {
-        dto.MustBeValid(logger);
+        sendMailDto.MustBeValid(logger);
         
         var request = new SendEmailMessageRequest
         {
-            Message = dto.Message,
-            Title = dto.Title,
-            ReceiverEmails = dto.ReceiverEmails,
-            Token = dto.Token
+            Message = sendMailDto.Message,
+            Title = sendMailDto.Title,
+            ReceiverEmails = sendMailDto.ReceiverEmails,
+            Token = sendMailDto.Token
         };
         
         logger.LogInformation($"{nameof(SendMailAsync)}: Call method: SendEmailMessageAsync");
@@ -33,22 +35,20 @@ internal class FakeMailService(
         logger.LogInformation($"{nameof(SendMailAsync)}: Call method: GetEmailByTokenAsync");
         var senderEmail = (await fakeMailApiService.GetEmailByTokenAsync(new GetEmailByTokenRequest
         {
-            Token = dto.Token
+            Token = sendMailDto.Token
         }, cancellationToken)).Email;
         
         logger.LogInformation($"{nameof(SendMailAsync)}: Writing email message to db");
         await contextFactory.ExecuteWithCommitAsync(async context =>
         {
-            foreach (var receiverEmail in dto.ReceiverEmails)
-            {
-                await context.EmailMessages.AddAsync(new EmailMessage
+            await context.EmailMessages.AddRangeAsync(
+                sendMailDto.ReceiverEmails.Select(receiverEmail => new EmailMessage
                 {
-                    Message = dto.Message,
+                    Message = sendMailDto.Message,
                     ReceiverEmail = receiverEmail,
                     SenderEmail = senderEmail,
                     CreatedAtUtc = DateTime.UtcNow
-                }, cancellationToken);   
-            }
+                }), cancellationToken);
         }, IsolationLevel.ReadUncommitted, cancellationToken);
         
         logger.LogInformation($"{nameof(SendMailAsync)}: Writing completed successfully");

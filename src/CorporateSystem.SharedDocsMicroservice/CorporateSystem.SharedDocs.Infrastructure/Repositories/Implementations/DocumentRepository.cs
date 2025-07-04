@@ -189,44 +189,46 @@ internal class DocumentRepository(IOptions<PostgresOptions> options)
         var @params = new DynamicParameters();
 
         conditions = new List<string>();
-        
-        if (filter is not null)
+
+        if (filter is null)
         {
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("id = ANY(@Ids)");
-                @params.Add("Ids", filter.Ids);
-            }
+            return @params;
+        }
+        
+        if (filter.Ids.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("id = ANY(@Ids)");
+            @params.Add("Ids", filter.Ids);
+        }
 
-            if (filter.ModifiedAt.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("modified_at = ANY(@ModifiedAt)");
-                @params.Add("ModifiedAt", filter.ModifiedAt);
-            }
+        if (filter.ModifiedAt.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("modified_at = ANY(@ModifiedAt)");
+            @params.Add("ModifiedAt", filter.ModifiedAt);
+        }
 
-            if (filter.Contents.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("content = ANY(@Contents)");
-                @params.Add("Contents", filter.Contents);
-            }
+        if (filter.Contents.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("content = ANY(@Contents)");
+            @params.Add("Contents", filter.Contents);
+        }
 
-            if (filter.Titles.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("title = ANY(@Titles)");
-                @params.Add("Titles", filter.Titles);
-            }
+        if (filter.Titles.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("title = ANY(@Titles)");
+            @params.Add("Titles", filter.Titles);
+        }
 
-            if (filter.OwnerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("owner_id = ANY(@OwnerIds)");
-                @params.Add("OwnerIds", filter.OwnerIds);
-            }
+        if (filter.OwnerIds.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("owner_id = ANY(@OwnerIds)");
+            @params.Add("OwnerIds", filter.OwnerIds);
+        }
 
-            if (filter.CreatedAt.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("created_at = ANY(@CreatedAt)");
-                @params.Add("CreatedAt", filter.CreatedAt);
-            }
+        if (filter.CreatedAt.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("created_at = ANY(@CreatedAt)");
+            @params.Add("CreatedAt", filter.CreatedAt);
         }
 
         return @params;

@@ -1,20 +1,20 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
+using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Kafka;
-using CorporateSystem.Auth.Kafka.Interfaces;
 using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
 using CorporateSystem.Auth.Services.Options;
-using CorporateSystem.Auth.Services.Services.Filters;
 using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Grpc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -23,14 +23,14 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
-internal class UserService(
-    IContextFactory contextFactory,
+internal sealed class UserService(
+    IContextFactory<DataContext> contextFactory,
     IPasswordHasher passwordHasher,
     IRegistrationCodesRepository registrationCodesRepository,
     GrpcNotificationClient grpcNotificationClient,
     ITokenService tokenService,
     IOptions<NotificationOptions> notificationOptions,
-    KafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
+    IKafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
     ILogger<UserService> logger) : IAuthService, IRegistrationService, IUserService
 {
     private readonly NotificationOptions _notificationOptions = notificationOptions.Value;
@@ -43,7 +43,7 @@ internal class UserService(
                 .Include(user => user.RefreshTokens)
                 .FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken);
 
-            if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
+            if (user is null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
             {
                 logger.LogInformation(user is null
                     ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
@@ -62,7 +62,8 @@ internal class UserService(
             
             var now = DateTimeOffset.UtcNow;
             
-            var existingToken = user.RefreshTokens.FirstOrDefault(rt => rt.IpAddress == dto.UserIpAddress && rt.ExpiryOn > now);
+            var existingToken = user.RefreshTokens
+                .FirstOrDefault(rt => rt.IpAddress == dto.UserIpAddress && rt.ExpiryOn > now);
 
             if (existingToken != null)
             {
@@ -148,8 +149,6 @@ internal class UserService(
             throw new InvalidRegistrationException("Неверный код");
         }
 
-        await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
-
         await contextFactory.ExecuteWithCommitAsync(async context =>
         {
             await context.Users.AddAsync(new User
@@ -162,37 +161,18 @@ internal class UserService(
                 Gender = dto.Gender
             }, cancellationToken);
         }, cancellationToken: cancellationToken);
+        
+        await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
     }
 
-    public Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default)
-    {
-        return contextFactory.ExecuteWithoutCommitAsync(async context =>
-        {
-            var users = context.Users.AsQueryable();
-
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Ids!.Contains(user.Id));
-            }
-
-            if (filter.Passwords.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Passwords!.Contains(user.Password));
-            }
-
-            if (filter.Emails.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Emails!.Contains(user.Email));
-            }
-
-            if (filter.Roles.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Roles!.Contains(user.Role));
-            }
-
-            return await users.ToArrayAsync(cancellationToken);
-        }, cancellationToken: cancellationToken);
-    }
+    public Task<User[]> GetUsersByExpressionAsync(
+        Expression<Func<User, bool>> expression,
+        CancellationToken cancellationToken = default) =>
+            contextFactory.ExecuteWithoutCommitAsync(async context =>
+                    await context.Users
+                        .Where(expression)
+                        .ToArrayAsync(cancellationToken),
+                cancellationToken: cancellationToken);
 
     public Task DeleteUsersAsync(int[] ids, CancellationToken cancellationToken = default)
     {
@@ -220,10 +200,16 @@ internal class UserService(
 
             context.Users.RemoveRange(currentUsers);
 
-            await kafkaAsyncProducer.ProduceAsync(userIds.Select(userId => new UserDeleteEvent
+            var outboxEvents = userIds.Select(userId => new OutboxEvent
             {
-                UserId = userId
-            }).ToList(), cancellationToken);
+                EventType = nameof(UserDeleteEvent),
+                Payload = JsonSerializer.Serialize(new UserDeleteEvent
+                {
+                    UserId = userId
+                })
+            });
+            
+            context.OutboxEvents.AddRange(outboxEvents);
         }, cancellationToken: cancellationToken);
     }
 
