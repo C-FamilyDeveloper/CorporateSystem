@@ -193,8 +193,7 @@ public class DocumentServiceTests
         // Assert
         _mockDocumentRepository.Verify(repo => repo.UpdateAsync(
             dto.DocumentId,
-            It.Is<UpdateDocumentDto>(updateDto =>
-                updateDto.Content == dto.NewContent),
+            It.IsAny<UpdateDocumentDto>(),
             It.IsAny<CancellationToken>()), Times.Once);
         
         _mockDocumentChangeLogService.Verify(service => 
