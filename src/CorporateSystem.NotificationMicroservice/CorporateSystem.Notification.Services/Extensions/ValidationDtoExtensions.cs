@@ -5,14 +5,14 @@ namespace CorporateSystem.Services.Extensions;
 
 internal static class ValidationDtoExtensions
 {
-    public static void MustBeValid<T>(this EmailSendDto dto, ILogger<T> logger)
+    public static void MustBeValid<T>(this EmailSendDto emailSendDto, ILogger<T> logger)
     {
         try
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(dto.Message);
-            ArgumentException.ThrowIfNullOrWhiteSpace(dto.Token);
-            ArgumentException.ThrowIfNullOrWhiteSpace(dto.Title);
-            ArgumentNullException.ThrowIfNull(dto.ReceiverEmails);
+            ArgumentException.ThrowIfNullOrWhiteSpace(emailSendDto.Message);
+            ArgumentException.ThrowIfNullOrWhiteSpace(emailSendDto.Token);
+            ArgumentException.ThrowIfNullOrWhiteSpace(emailSendDto.Title);
+            ArgumentNullException.ThrowIfNull(emailSendDto.ReceiverEmails);
         }
         catch (Exception e)
         {

@@ -1,5 +1,4 @@
 ﻿using System.Net.Http.Json;
-using System.Text.Json;
 using CorporateSystem.Services.Dtos;
 using CorporateSystem.Services.Options;
 using CorporateSystem.Services.Services.Interfaces;
@@ -8,23 +7,19 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
-internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions, ILogger<FakeMailApiService> logger) 
+internal sealed class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions, ILogger<FakeMailApiService> logger) 
     : IFakeMailApiService
 {
     public async Task SendEmailMessageAsync(
         SendEmailMessageRequest request,
         CancellationToken cancellationToken = default)
     {
-        using var httpClient = CreateHttpClient();
+        var responseMessage = await SendAsync(
+            new Uri(new Uri(fakeMailOptions.Value.ConnectionString), "/api/send-message"),
+            HttpMethod.Post,
+            request,
+            cancellationToken: cancellationToken);
         
-        var requestMessage = new HttpRequestMessage
-        {
-            Method = HttpMethod.Post,
-            RequestUri = new Uri(httpClient.BaseAddress!, "/api/send-message"),
-            Content = JsonContent.Create(request)
-        };
-
-        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
         logger.LogInformation($"{nameof(SendEmailMessageAsync)}: response status code={responseMessage.StatusCode}");
         responseMessage.EnsureSuccessStatusCode();
     }
@@ -33,16 +28,12 @@ internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions, ILo
         GetEmailByTokenRequest request,
         CancellationToken cancellationToken = default)
     {
-        using var httpClient = CreateHttpClient();
+        var responseMessage = await SendAsync(
+            new Uri(new Uri(fakeMailOptions.Value.ConnectionString), "/api/get-email-by-token"),
+            HttpMethod.Get,
+            headers: new() { {"X-Token", request.Token} },
+            cancellationToken: cancellationToken);
         
-        var requestMessage = new HttpRequestMessage
-        {
-            Method = HttpMethod.Get,
-            Headers = { {"X-Token", request.Token} },
-            RequestUri = new Uri(httpClient.BaseAddress!, "/api/get-email-by-token")
-        };
-
-        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken);
         logger.LogInformation($"{nameof(GetEmailByTokenAsync)}: response status code={responseMessage.StatusCode}");
         responseMessage.EnsureSuccessStatusCode();
         
@@ -55,5 +46,62 @@ internal class FakeMailApiService(IOptions<FakeMailOptions> fakeMailOptions, ILo
         {
             BaseAddress = new Uri(fakeMailOptions.Value.ConnectionString)
         };
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        Uri uri,
+        HttpMethod httpMethod,
+        Dictionary<string, string>? headers = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var httpClient = CreateHttpClient();
+        
+        var httpMessage = new HttpRequestMessage
+        {
+            RequestUri = uri,
+            Method = httpMethod,
+        };
+
+        if (headers is not null)
+        {
+            foreach (var (header, value) in headers)
+            {
+                httpMessage.Headers.Add(header, value);
+            }
+        }
+
+        return await httpClient.SendAsync(httpMessage, cancellationToken);
+    }
+    
+    private async Task<HttpResponseMessage> SendAsync<T>(
+        Uri uri,
+        HttpMethod httpMethod,
+        T? data = null,
+        Dictionary<string, string>? headers = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        using var httpClient = CreateHttpClient();
+        
+        var httpMessage = new HttpRequestMessage
+        {
+            RequestUri = uri,
+            Method = httpMethod,
+        };
+
+        if (data is not null)
+        {
+            httpMessage.Content = JsonContent.Create(data);
+        }
+
+        if (headers is not null)
+        {
+            foreach (var (header, value) in headers)
+            {
+                httpMessage.Headers.Add(header, value);
+            }
+        }
+
+        return await httpClient.SendAsync(httpMessage, cancellationToken);
     }
 }

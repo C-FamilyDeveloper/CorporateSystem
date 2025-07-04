@@ -1,4 +1,5 @@
-﻿using CorporateSystem.Services.Services.Implementations;
+﻿using CorporateSystem.Services.Services.Factory;
+using CorporateSystem.Services.Services.Implementations;
 using CorporateSystem.Services.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<IEmailSenderService, EmailSenderService>()
             .AddScoped<IMailService, MailService>()
             .AddScoped<IFakeMailService, FakeMailService>()
-            .AddScoped<IFakeMailApiService, FakeMailApiService>();
+            .AddScoped<IFakeMailApiService, FakeMailApiService>()
+            .AddSingleton<IEmailServiceFactory, EmailServiceFactory>();
     }
 }
