@@ -12,9 +12,11 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddKeyedProduceHandler(this IServiceCollection services)
     {
         return services
-            .AddSingleton<KafkaAsyncProducer<Null, UserDeleteEvent>>()
+            .AddSingleton<IEventHandlerFactory, EventHandlerFactory>()
+            .AddScoped<IEventHandler<UserDeleteEvent>, UserDeleteEventHandler>()
+            .AddScoped<KafkaAsyncProducer<Null, UserDeleteEvent>>()
             .AddSingleton<ISerializer<UserDeleteEvent>, TextJsonSerializer<UserDeleteEvent>>()
             .AddSingleton<ISerializer<Null>>(_ => Confluent.Kafka.Serializers.Null)
-            .AddSingleton<IProducerHandler<Null, UserDeleteEvent>, ProducerHandler<Null, UserDeleteEvent>>();
+            .AddScoped<IProducerHandler<Null, UserDeleteEvent>, ProducerHandler<Null, UserDeleteEvent>>();
     }
 }

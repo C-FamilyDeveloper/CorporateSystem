@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using CorporateSystem.Auth.Api.Background.Jobs;
+using CorporateSystem.Auth.Api.Background.Services;
 using CorporateSystem.Auth.Api.Middlewares;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Extensions;
@@ -70,6 +71,7 @@ public class Startup
             };
         });
 
+        services.AddHostedService<OutboxEventBackgroundService>();
         services.AddQuartz(config =>
         {
             var jobKey = new JobKey("ClearExpiredRefreshTokensJob");

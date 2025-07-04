@@ -1,12 +1,12 @@
 ﻿using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
 using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Kafka;
-using CorporateSystem.Auth.Kafka.Interfaces;
 using CorporateSystem.Auth.Kafka.Models;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Extensions;
@@ -15,7 +15,6 @@ using CorporateSystem.Auth.Services.Services.GrpcServices;
 using CorporateSystem.Auth.Services.Services.Interfaces;
 using Grpc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -201,10 +200,16 @@ internal sealed class UserService(
 
             context.Users.RemoveRange(currentUsers);
 
-            await kafkaAsyncProducer.ProduceAsync(userIds.Select(userId => new UserDeleteEvent
+            var outboxEvents = userIds.Select(userId => new OutboxEvent
             {
-                UserId = userId
-            }).ToList(), cancellationToken);
+                EventType = nameof(UserDeleteEvent),
+                Payload = JsonSerializer.Serialize(new UserDeleteEvent
+                {
+                    UserId = userId
+                })
+            });
+            
+            context.OutboxEvents.AddRange(outboxEvents);
         }, cancellationToken: cancellationToken);
     }
 
