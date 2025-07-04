@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using CorporateSystem.Auth.Domain.Entities;
+using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Services.Exceptions;
 using CorporateSystem.Auth.Services.Options;
@@ -13,7 +14,8 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
-internal class JwtTokenService(IContextFactory contextFactory, IOptions<JwtToken> jwtToken) : ITokenService
+internal sealed class JwtTokenService(IContextFactory<DataContext> contextFactory, IOptions<JwtToken> jwtToken) 
+    : ITokenService
 {
     private readonly JwtToken _jwtToken = jwtToken.Value;
     

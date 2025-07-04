@@ -43,7 +43,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             .ReturnsAsync(() => successCode);
         
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
@@ -79,7 +79,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
             .ReturnsAsync(() => null);
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             registrationCodesRepositoryMock.Object, 
             null,
@@ -121,7 +121,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
@@ -157,7 +157,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
@@ -186,7 +186,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
 
         // Arrange
         var userService = new UserService(
-            testFixture.GetService<IContextFactory>(),
+            testFixture.GetService<IContextFactory<DataContext>>(),
             testFixture.GetService<IPasswordHasher>(),
             null,
             null,
@@ -270,7 +270,7 @@ public class UserServiceTests : IClassFixture<TestFixture>
     {
         using var testFixture = new TestFixture();
 
-        return new JwtTokenService(testFixture.GetService<IContextFactory>(), Options.Create(new JwtToken
+        return new JwtTokenService(testFixture.GetService<IContextFactory<DataContext>>(), Options.Create(new JwtToken
         {
             JwtSecret = _testSecretKey
         }));

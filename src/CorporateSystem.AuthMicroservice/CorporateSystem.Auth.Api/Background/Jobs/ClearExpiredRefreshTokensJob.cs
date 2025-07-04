@@ -1,10 +1,11 @@
-﻿using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
+﻿using CorporateSystem.Auth.Infrastructure;
+using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 
 namespace CorporateSystem.Auth.Api.Background.Jobs;
 
-public class ClearExpiredRefreshTokensJob(IContextFactory contextFactory, ILogger<ClearExpiredRefreshTokensJob> logger) 
+public class ClearExpiredRefreshTokensJob(IContextFactory<DataContext> contextFactory, ILogger<ClearExpiredRefreshTokensJob> logger) 
     : IJob
 {
     public async Task Execute(IJobExecutionContext context)

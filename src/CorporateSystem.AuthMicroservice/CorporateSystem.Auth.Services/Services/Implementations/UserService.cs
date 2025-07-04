@@ -2,6 +2,7 @@
 using Confluent.Kafka;
 using CorporateSystem.Auth.Domain.Entities;
 using CorporateSystem.Auth.Domain.Enums;
+using CorporateSystem.Auth.Infrastructure;
 using CorporateSystem.Auth.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Auth.Kafka;
 using CorporateSystem.Auth.Kafka.Interfaces;
@@ -23,8 +24,8 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
-internal class UserService(
-    IContextFactory contextFactory,
+internal sealed class UserService(
+    IContextFactory<DataContext> contextFactory,
     IPasswordHasher passwordHasher,
     IRegistrationCodesRepository registrationCodesRepository,
     GrpcNotificationClient grpcNotificationClient,
@@ -43,7 +44,7 @@ internal class UserService(
                 .Include(user => user.RefreshTokens)
                 .FirstOrDefaultAsync(user => user.Email == dto.Email, cancellationToken);
 
-            if (user == null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
+            if (user is null || !passwordHasher.VerifyPassword(dto.Password, user.Password))
             {
                 logger.LogInformation(user is null
                     ? $"{nameof(AuthenticateAsync)}: Пользователь с email={dto.Email} не найден"
@@ -62,7 +63,8 @@ internal class UserService(
             
             var now = DateTimeOffset.UtcNow;
             
-            var existingToken = user.RefreshTokens.FirstOrDefault(rt => rt.IpAddress == dto.UserIpAddress && rt.ExpiryOn > now);
+            var existingToken = user.RefreshTokens
+                .FirstOrDefault(rt => rt.IpAddress == dto.UserIpAddress && rt.ExpiryOn > now);
 
             if (existingToken != null)
             {
@@ -162,18 +164,9 @@ internal class UserService(
                 Gender = dto.Gender
             }, cancellationToken);
         }, cancellationToken: cancellationToken);
+        
+        await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
     }
-
-    public Task<User[]> GetUsersByFilterAsync(UserFilter filter, CancellationToken cancellationToken = default)
-    {
-        return contextFactory.ExecuteWithoutCommitAsync(async context =>
-        {
-            var users = context.Users.AsQueryable();
-
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                users = users.Where(user => filter.Ids!.Contains(user.Id));
-            }
 
             if (filter.Passwords.IsNotNullAndNotEmpty())
             {
