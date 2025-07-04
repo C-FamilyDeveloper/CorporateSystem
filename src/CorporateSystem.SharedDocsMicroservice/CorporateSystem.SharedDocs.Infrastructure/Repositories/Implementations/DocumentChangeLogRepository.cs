@@ -129,26 +129,28 @@ internal class DocumentChangeLogRepository(IOptions<PostgresOptions> options)
         var @params = new DynamicParameters();
 
         conditions = new List<string>();
-        
-        if (filter is not null)
+
+        if (filter is null)
         {
-            if (filter.Ids.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("id = ANY(@Ids)");
-                @params.Add("Ids", filter.Ids);
-            }
+            return @params;
+        }
+        
+        if (filter.Ids.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("id = ANY(@Ids)");
+            @params.Add("Ids", filter.Ids);
+        }
 
-            if (filter.DocumentIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("document_id = ANY(@DocumentIds)");
-                @params.Add("DocumentIds", filter.DocumentIds);
-            }
+        if (filter.DocumentIds.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("document_id = ANY(@DocumentIds)");
+            @params.Add("DocumentIds", filter.DocumentIds);
+        }
 
-            if (filter.UserIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("user_id = ANY(@UserIds)");
-                @params.Add("UserIds", filter.UserIds);
-            }
+        if (filter.UserIds.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("user_id = ANY(@UserIds)");
+            @params.Add("UserIds", filter.UserIds);
         }
 
         return @params;

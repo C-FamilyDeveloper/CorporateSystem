@@ -23,23 +23,7 @@ internal class DocumentCompositeRepository(IOptions<PostgresOptions> options)
               from documents d
               join document_users du on du.document_id = d.id";
 
-        var @params = new DynamicParameters();
-        var conditions = new List<string>();
-        
-        if (filter is not null)
-        {
-            if (filter.OwnerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("d.owner_id = ANY(@OwnerIds)");
-                @params.Add("OwnerIds", filter.OwnerIds);
-            }
-
-            if (filter.FollowerIds.IsNotNullAndNotEmpty())
-            {
-                conditions.Add("du.user_id = ANY(@FollowersIds)");
-                @params.Add("FollowersIds", filter.FollowerIds);
-            }
-        }
+        var @params = GetDynamicParametersForFilter(filter, out var conditions);
 
         if (conditions.Any())
         {
@@ -89,5 +73,31 @@ internal class DocumentCompositeRepository(IOptions<PostgresOptions> options)
         transaction.Complete();
 
         return documents;
+    }
+
+    private DynamicParameters GetDynamicParametersForFilter(DocumentInfoFilter? filter, out List<string> conditions)
+    {
+        var @params = new DynamicParameters();
+
+        conditions = new List<string>();
+
+        if (filter is null)
+        {
+            return @params;
+        }
+
+        if (filter.OwnerIds.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("d.owner_id = ANY(@OwnerIds)");
+            @params.Add("OwnerIds", filter.OwnerIds);
+        }
+
+        if (filter.FollowerIds.IsNotNullAndNotEmpty())
+        {
+            conditions.Add("du.user_id = ANY(@FollowersIds)");
+            @params.Add("FollowersIds", filter.FollowerIds);
+        }
+
+        return @params;
     }
 }

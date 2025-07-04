@@ -20,11 +20,7 @@ internal class DocumentChangeLogService(
             .OrderByDescending(documentLog => documentLog.ChangedAt)
             .ToArray();
 
-        if (!documentLogsArray.Any())
-        {
-            await CreateChangeLogAsync(changeLog, cancellationToken);
-        }
-        else
+        if (documentLogsArray.Any())
         {
             var documentLog = documentLogsArray.First();
 
@@ -36,7 +32,11 @@ internal class DocumentChangeLogService(
             else
             {
                 await CreateChangeLogAsync(changeLog, cancellationToken);
-            }   
+            }
+        }
+        else
+        {
+            await CreateChangeLogAsync(changeLog, cancellationToken);
         }
     }
 
