@@ -2,7 +2,7 @@
 
 namespace CorporateSystem.Auth.Services.Services.Implementations;
 
-internal class PasswordHasher : IPasswordHasher
+internal sealed class PasswordHasher : IPasswordHasher
 {
     public string HashPassword(string password)
     {

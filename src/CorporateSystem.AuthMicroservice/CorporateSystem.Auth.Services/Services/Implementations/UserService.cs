@@ -150,8 +150,6 @@ internal sealed class UserService(
             throw new InvalidRegistrationException("Неверный код");
         }
 
-        await registrationCodesRepository.DeleteAsync([dto.Email], cancellationToken);
-
         await contextFactory.ExecuteWithCommitAsync(async context =>
         {
             await context.Users.AddAsync(new User

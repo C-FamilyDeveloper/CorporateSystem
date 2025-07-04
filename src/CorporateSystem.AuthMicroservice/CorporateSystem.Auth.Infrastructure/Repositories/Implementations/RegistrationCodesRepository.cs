@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Auth.Infrastructure.Repositories.Implementations;
 
-internal class RegistrationCodesRepository(
+internal sealed class RegistrationCodesRepository(
     IOptions<RedisOptions> redisOptions,
     ILogger<RegistrationCodesRepository> logger)
     : RedisRepository(redisOptions.Value), IRegistrationCodesRepository
