@@ -2,9 +2,7 @@
 
 namespace CorporateSystem.Auth.Kafka.Interfaces;
 
-public interface IKeyedEvent;
-
-public interface IKeyedEvent<TKey> : IKeyedEvent
+public interface IKeyedEvent<TKey>
 {
     [JsonIgnore]
     public TKey Key { get; init; }

@@ -30,7 +30,7 @@ internal sealed class UserService(
     GrpcNotificationClient grpcNotificationClient,
     ITokenService tokenService,
     IOptions<NotificationOptions> notificationOptions,
-    KafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
+    IKafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
     ILogger<UserService> logger) : IAuthService, IRegistrationService, IUserService
 {
     private readonly NotificationOptions _notificationOptions = notificationOptions.Value;

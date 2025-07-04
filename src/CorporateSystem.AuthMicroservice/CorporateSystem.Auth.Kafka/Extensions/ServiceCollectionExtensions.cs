@@ -14,7 +14,7 @@ public static class ServiceCollectionExtensions
         return services
             .AddSingleton<IEventHandlerFactory, EventHandlerFactory>()
             .AddScoped<IEventHandler<UserDeleteEvent>, UserDeleteEventHandler>()
-            .AddScoped<KafkaAsyncProducer<Null, UserDeleteEvent>>()
+            .AddScoped<IKafkaAsyncProducer<Null, UserDeleteEvent>, KafkaAsyncProducer<Null, UserDeleteEvent>>()
             .AddSingleton<ISerializer<UserDeleteEvent>, TextJsonSerializer<UserDeleteEvent>>()
             .AddSingleton<ISerializer<Null>>(_ => Confluent.Kafka.Serializers.Null)
             .AddScoped<IProducerHandler<Null, UserDeleteEvent>, ProducerHandler<Null, UserDeleteEvent>>();
