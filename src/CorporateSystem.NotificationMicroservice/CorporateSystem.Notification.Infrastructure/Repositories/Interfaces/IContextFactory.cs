@@ -1,21 +1,22 @@
 ﻿using System.Transactions;
+using Microsoft.EntityFrameworkCore;
 
 namespace CorporateSystem.Infrastructure.Repositories.Interfaces;
 
-public interface IContextFactory
+public interface IContextFactory<out TDbContext> where TDbContext : DbContext
 {
     Task<T> ExecuteWithoutCommitAsync<T>(
-        Func<DataContext, Task<T>> action,
+        Func<TDbContext, Task<T>> action,
         IsolationLevel isolationLevel = IsolationLevel.Snapshot,
         CancellationToken cancellationToken = default);
 
     Task ExecuteWithCommitAsync(
-        Func<DataContext, Task> action,
+        Func<TDbContext, Task> action,
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
         CancellationToken cancellationToken = default);
     
     Task<T> ExecuteWithCommitAsync<T>(
-        Func<DataContext, Task<T>> action,
+        Func<TDbContext, Task<T>> action,
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
         CancellationToken cancellationToken = default);
 }

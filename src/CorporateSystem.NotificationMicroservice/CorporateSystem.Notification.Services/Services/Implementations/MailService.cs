@@ -7,24 +7,24 @@ using MimeKit;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
-internal class MailService(IOptions<EmailOptions> emailOptions) : IMailService
+internal sealed class MailService(IOptions<EmailOptions> emailOptions) : IMailService
 {
-    public async Task SendMailAsync(SendMailDto dto, CancellationToken cancellationToken = default)
+    public async Task SendMailAsync(SendMailDto sendMailDto, CancellationToken cancellationToken = default)
     {
         var emailOptionsSnapshot = emailOptions.Value;
         
         using var emailMessage = new MimeMessage
         {
-            Subject = dto.Title,
+            Subject = sendMailDto.Title,
             Body = new TextPart(MimeKit.Text.TextFormat.Html)
             {
-                Text = dto.Message
+                Text = sendMailDto.Message
             }
         };
  
         emailMessage.From.Add(new MailboxAddress("", emailOptionsSnapshot.Login));
         
-        foreach (var receiverEmail in dto.ReceiverEmails)
+        foreach (var receiverEmail in sendMailDto.ReceiverEmails)
         {
             emailMessage.To.Add(new MailboxAddress("", receiverEmail));
         }

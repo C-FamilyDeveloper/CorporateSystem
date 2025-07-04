@@ -4,36 +4,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CorporateSystem.Infrastructure.Repositories.Implementations;
 
-internal class ContextFactory(DbContextOptions<DataContext> options) : IContextFactory
+internal sealed class ContextFactory<TDbContext>(DbContextOptions<TDbContext> options) : IContextFactory<TDbContext>
+    where TDbContext : DbContext
 {
     public async Task<T> ExecuteWithoutCommitAsync<T>(
-        Func<DataContext, Task<T>> action,
+        Func<TDbContext, Task<T>> action,
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(action);
-        await using var context = new DataContext(options);
         
-        using var scope = new TransactionScope(
-            TransactionScopeOption.Required,
-            new TransactionOptions { IsolationLevel = isolationLevel },
-            TransactionScopeAsyncFlowOption.Enabled);
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var context = (TDbContext)Activator.CreateInstance(typeof(TDbContext), options)!;
+        
+        using var scope = CreateTransactionScope(isolationLevel);
 
         return await action(context);
     }
 
     public async Task ExecuteWithCommitAsync(
-        Func<DataContext, Task> action,
+        Func<TDbContext, Task> action,
         IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(action);
-        await using var context = new DataContext(options);
+        await using var context = (TDbContext)Activator.CreateInstance(typeof(TDbContext), options)!;
         
-        using var scope = new TransactionScope(
-            TransactionScopeOption.Required,
-            new TransactionOptions { IsolationLevel = isolationLevel },
-            TransactionScopeAsyncFlowOption.Enabled);
+        using var scope = CreateTransactionScope(isolationLevel);
 
         await action(context);
             
@@ -42,17 +39,14 @@ internal class ContextFactory(DbContextOptions<DataContext> options) : IContextF
     }
 
     public async Task<T> ExecuteWithCommitAsync<T>(
-        Func<DataContext, Task<T>> action,
+        Func<TDbContext, Task<T>> action,
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(action);
-        await using var context = new DataContext(options);
-        
-        using var scope = new TransactionScope(
-            TransactionScopeOption.Required,
-            new TransactionOptions { IsolationLevel = isolationLevel },
-            TransactionScopeAsyncFlowOption.Enabled);
+        await using var context = (TDbContext)Activator.CreateInstance(typeof(TDbContext), options)!;
+
+        using var scope = CreateTransactionScope(isolationLevel);
 
         var result = await action(context);
             
@@ -61,4 +55,9 @@ internal class ContextFactory(DbContextOptions<DataContext> options) : IContextF
             
         return result;
     }
+    
+    private TransactionScope CreateTransactionScope(IsolationLevel isolationLevel) => 
+        new(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = isolationLevel },
+            TransactionScopeAsyncFlowOption.Enabled);
 }

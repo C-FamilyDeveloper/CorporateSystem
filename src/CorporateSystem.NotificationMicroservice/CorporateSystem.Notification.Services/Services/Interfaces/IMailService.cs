@@ -4,5 +4,5 @@ namespace CorporateSystem.Services.Services.Interfaces;
 
 public interface IMailService
 {
-    Task SendMailAsync(SendMailDto dto, CancellationToken cancellationToken = default);
+    Task SendMailAsync(SendMailDto sendMailDto, CancellationToken cancellationToken = default);
 }
