@@ -1,8 +1,10 @@
 ﻿using CorporateSystem.Services.Dtos;
 using CorporateSystem.Services.Extensions;
+using CorporateSystem.Services.Options;
 using CorporateSystem.Services.Services.Factory;
 using CorporateSystem.Services.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
@@ -27,7 +29,6 @@ internal sealed class EmailSenderService(
         {
             tasks.Add(service
                 .SendMailAsync(new SendMailDto(
-                    emailSendDto.Token,
                     emailSendDto.Title, 
                     emailSendDto.Message,
                     receiverEmails.ToArray()),

@@ -5,8 +5,10 @@ using CorporateSystem.Notification.Api.GrpcServices;
 using CorporateSystem.Services.Extensions;
 using CorporateSystem.Services.Options;
 using CorporateSystem.Services.Services.Implementations;
+using Google.Api;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.OpenApi.Models;
 
 public partial class Program
@@ -34,6 +36,7 @@ public partial class Program
 
         builder.Services.Configure<FakeMailOptions>(builder.Configuration.GetSection("FakeMailOptions"));
         builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("EmailOptions"));
+        builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("NotificationOptions"));
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
         builder.Services.AddDbContext<DataContext>(options =>

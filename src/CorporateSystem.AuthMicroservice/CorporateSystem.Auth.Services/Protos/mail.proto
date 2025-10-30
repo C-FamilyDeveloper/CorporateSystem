@@ -9,10 +9,9 @@ service MailService {
 }
 
 message SendMessageRequest {
-  string token = 1;
-  string message = 2;
-  string title = 3;
-  repeated string receiverEmails = 4;
+  string message = 1;
+  string title = 2;
+  repeated string receiverEmails = 3;
 }
 
 message SendMessageResponse {

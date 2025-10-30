@@ -1,11 +1,13 @@
-﻿using System.Transactions;
-using CorporateSystem.Infrastructure.Repositories;
+﻿using CorporateSystem.Infrastructure.Repositories;
 using CorporateSystem.Infrastructure.Repositories.Interfaces;
 using CorporateSystem.Notification.Domain.Entities;
 using CorporateSystem.Services.Dtos;
 using CorporateSystem.Services.Extensions;
+using CorporateSystem.Services.Options;
 using CorporateSystem.Services.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Transactions;
 
 namespace CorporateSystem.Services.Services.Implementations;
 
@@ -14,7 +16,8 @@ public interface IFakeMailService : IMailService;
 internal sealed class FakeMailService(
     IFakeMailApiService fakeMailApiService,
     IContextFactory<DataContext> contextFactory,
-    ILogger<IFakeMailService> logger) : IFakeMailService
+    ILogger<IFakeMailService> logger,
+    IOptions<NotificationOptions> options) : IFakeMailService
 {
     public async Task SendMailAsync(SendMailDto sendMailDto, CancellationToken cancellationToken = default)
     {
@@ -25,7 +28,7 @@ internal sealed class FakeMailService(
             Message = sendMailDto.Message,
             Title = sendMailDto.Title,
             ReceiverEmails = sendMailDto.ReceiverEmails,
-            Token = sendMailDto.Token
+            Token = options.Value.Token
         };
         
         logger.LogInformation($"{nameof(SendMailAsync)}: Call method: SendEmailMessageAsync");
@@ -35,7 +38,7 @@ internal sealed class FakeMailService(
         logger.LogInformation($"{nameof(SendMailAsync)}: Call method: GetEmailByTokenAsync");
         var senderEmail = (await fakeMailApiService.GetEmailByTokenAsync(new GetEmailByTokenRequest
         {
-            Token = sendMailDto.Token
+            Token = request.Token
         }, cancellationToken)).Email;
         
         logger.LogInformation($"{nameof(SendMailAsync)}: Writing email message to db");
