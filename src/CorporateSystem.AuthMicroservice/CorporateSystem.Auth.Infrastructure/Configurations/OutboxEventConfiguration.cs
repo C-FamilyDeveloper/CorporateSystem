@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CorporateSystem.Auth.Domain.Configurations
+namespace CorporateSystem.Auth.Infrastructure.Configurations
 {
     public class OutboxEventConfiguration : IEntityTypeConfiguration<OutboxEvent>
     {
