@@ -9,7 +9,6 @@ public class DataContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<OutboxEvent> OutboxEvents { get; set; }
-    public DbSet<Department> Departments { get; set; }
 
     public DataContext()
     {

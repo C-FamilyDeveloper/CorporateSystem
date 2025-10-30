@@ -12,6 +12,4 @@ public class User
     public Gender Gender { get; init; }
     public Role Role { get; init; }
     public List<RefreshToken> RefreshTokens { get; init; }
-    public Department Department { get; init; }
-    public int DepartmentId { get; init; }
 }
