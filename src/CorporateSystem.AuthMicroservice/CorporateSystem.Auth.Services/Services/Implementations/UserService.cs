@@ -29,12 +29,9 @@ internal sealed class UserService(
     IRegistrationCodesRepository registrationCodesRepository,
     GrpcNotificationClient grpcNotificationClient,
     ITokenService tokenService,
-    IOptions<NotificationOptions> notificationOptions,
     IKafkaAsyncProducer<Null, UserDeleteEvent> kafkaAsyncProducer,
     ILogger<UserService> logger) : IAuthService, IRegistrationService, IUserService
 {
-    private readonly NotificationOptions _notificationOptions = notificationOptions.Value;
-
     public Task<AuthResultDto> AuthenticateAsync(AuthUserDto dto, CancellationToken cancellationToken = default)
     {
         return contextFactory.ExecuteWithCommitAsync(async context =>
@@ -121,7 +118,6 @@ internal sealed class UserService(
                 Title = "Регистрация в CorporateSystem",
                 Message = $"Ваш код подтверждения: {code}",
                 ReceiverEmails = { dto.Email },
-                Token = _notificationOptions.Token
             }, cancellationToken);
         }
         catch (Exception e)

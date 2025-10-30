@@ -39,7 +39,6 @@ public class Startup
         
         services.Configure<JwtToken>(Configuration.GetSection("JwtToken"));
         services.Configure<RedisOptions>(Configuration.GetSection("RedisOptions"));
-        services.Configure<NotificationOptions>(Configuration.GetSection("NotificationOptions"));
         services.Configure<GrpcNotificationOptions>(Configuration.GetSection("GrpcNotificationOptions"));
         services.Configure<ProducerOptions>($"{nameof(UserDeleteEvent)}", Configuration.GetSection("ProducerOptions"));
         

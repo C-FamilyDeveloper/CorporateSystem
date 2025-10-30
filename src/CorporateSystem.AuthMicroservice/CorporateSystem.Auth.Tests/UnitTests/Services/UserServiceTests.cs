@@ -42,7 +42,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             registrationCodesRepositoryMock.Object, 
             null,
             testFixture.GetService<ITokenService>(),
-            new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
         
@@ -78,7 +77,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             registrationCodesRepositoryMock.Object, 
             null,
             testFixture.GetService<ITokenService>(),
-            new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             new LoggerFactory().CreateLogger<UserService>());
         
@@ -120,7 +118,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null,
             testFixture.GetService<ITokenService>(), 
-            new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             null);
     
@@ -156,7 +153,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null,
             testFixture.GetService<ITokenService>(),
-            new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
@@ -185,7 +181,6 @@ public class UserServiceTests : IClassFixture<TestFixture>
             null,
             null,
             testFixture.GetService<ITokenService>(),
-            new OptionsWrapper<NotificationOptions>(null),
             Mock.Of<IKafkaAsyncProducer<Null, UserDeleteEvent>>(),
             Mock.Of<ILogger<UserService>>());
         
